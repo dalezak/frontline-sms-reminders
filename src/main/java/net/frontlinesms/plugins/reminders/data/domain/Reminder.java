@@ -19,11 +19,7 @@
  */
 package net.frontlinesms.plugins.reminders.data.domain;
 
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -54,6 +50,8 @@ public class Reminder {
 	private static final String COLUMN_SUBJECT = "subject";
 	/** Column name for {@link #content} */
 	private static final String COLUMN_CONTENT = "content";
+	/** Column name for {@link #occurance} */
+	private static final String COLUMN_OCCURANCE = "occurance";
 	
 //> ENTITY FIELDS
 	/** Details of the fields that this class has. */
@@ -69,7 +67,9 @@ public class Reminder {
 		/** field mapping for {@link Reminder#subject} */
 		SUBJECT(COLUMN_SUBJECT),
 		/** field mapping for {@link Reminder#content} */
-		CONTENT(COLUMN_CONTENT);
+		CONTENT(COLUMN_CONTENT),
+		/** field mapping for {@link Reminder#occurance} */
+		OCCURANCE(COLUMN_OCCURANCE);
 		/** name of a field */
 		private final String fieldName;
 		/**
@@ -94,6 +94,17 @@ public class Reminder {
 		PENDING,
 		/** Sent */
 		SENT
+	}
+	
+	public enum Occurance {
+		/** Occuring Once */
+		ONCE,
+		/** Occuring Daily */
+		DAILY,
+		/** Occuring Weekly */
+		WEEKLY,
+		/** Occuring Monthly */
+		MONTHLY
 	}
 
 //> INSTANCE PROPERTIES
@@ -126,6 +137,10 @@ public class Reminder {
 	/** Recipient of the reminder */
 	@Column(name=COLUMN_RECIPIENTS)
 	private String recipients;
+	
+	/** Occurance of the reminder */
+	@Column(name=COLUMN_OCCURANCE)
+	private Occurance occurance;
 
 //> CONSTRUCTORS
 	/** Empty constructor required for hibernate. */
@@ -138,12 +153,13 @@ public class Reminder {
 	 * @param subject The reminder subject
 	 * @param content The reminder content
 	 */
-	public Reminder(long date, Type type, String recipients, String subject, String content) {
+	public Reminder(long date, Type type, String recipients, String subject, String content, Occurance occurance) {
 		this.type = type;
 		this.date = date;
 		this.recipients = recipients;
 		this.subject = subject;
 		this.content = content;
+		this.occurance = occurance;
 	}
 	
 //> ACCESSOR METHODS
@@ -190,12 +206,65 @@ public class Reminder {
 	
 	/**
 	 * sets the type of this Reminder.  Should be one of the Reminder.TYPE_ constants.
-	 * @param reminderType new value for {@link #status}
+	 * @param reminderType new value for {@link #reminderType}
 	 */
 	public void setType(Type reminderType) {
 		this.type = reminderType;
 	}
+	
+	/**
+	 * sets the occurance of this Reminder.  Should be one of the Reminder.OCCURANCE_ constants.
+	 * @param occurance new value for {@link #occurance}
+	 */
+	public void setOccurance(Occurance occurance) {
+		this.occurance = occurance;
+	}
 
+
+	/**
+	 * Gets the occurance of this Reminder.  Should be one of the Reminder.OCCURANCE_ constants.
+	 * @return {@link #occurance}
+	 */
+	public Occurance getOccurance() {
+		return this.occurance;
+	}
+	
+	public String getOccuranceLabel() {
+		if (this.getOccurance() == Reminder.Occurance.ONCE) {
+			return "Once";
+		}
+		else if (this.getOccurance() == Reminder.Occurance.DAILY) {
+			return "Daily";
+		}
+		else if (this.getOccurance() == Reminder.Occurance.WEEKLY) {
+			return "Weekly";
+		}
+		else if (this.getOccurance() == Reminder.Occurance.MONTHLY) {
+			return "Monthly";
+		}
+		else {
+			return "Once";
+		}
+	}
+	
+	public static Occurance getOccuranceForIndex(int index) {
+		switch(index) {
+			case 0 : return Occurance.ONCE;
+			case 1 : return Occurance.DAILY;
+			case 2 : return Occurance.WEEKLY;
+			case 3 : return Occurance.MONTHLY;
+			default: return Occurance.ONCE;
+		}
+	}
+	
+	public static int getIndexForOccurance(Occurance occurance) {
+		if (occurance == Occurance.ONCE) return 0;
+		if (occurance == Occurance.DAILY) return 1;
+		if (occurance == Occurance.WEEKLY) return 2;
+		if (occurance == Occurance.WEEKLY) return 3;
+		return 0;
+	}
+	
 	/**
 	 * Gets the text content of this reminder.
 	 * @return {@link #content}

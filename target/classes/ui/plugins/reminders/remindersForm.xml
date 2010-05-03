@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dialog name="dialogReminderForm" icon="/icons/reminders.png" text="Reminder" modal="true" resizable="true" closable="true" close="removeDialog(this)" bottom="10" top="10" left="10" right="10" columns="3" gap="13">
-    <label name="labelDate" icon="/icons/time.png" text="i18n.common.date" valign="top"/>
-    <panel name="panelDate" colspan="2" columns="5" gap="10">
+    <label name="labelDate" icon="/icons/date_time_start.png" text="i18n.common.date" valign="top"/>
+    <panel name="panelDate" colspan="2" columns="6" gap="10">
+    	<combobox name="comboOccurance" editable="false" weightx="1" weighty="1" selected="0">
+        	<choice text="Once"/>
+        	<choice text="Daily"/>
+        	<choice text="Weekly"/>
+        	<choice text="Monthly"/>
+        </combobox>
         <combobox name="comboHour" editable="false" weightx="1" weighty="1"></combobox>
 		<combobox name="comboMinute" editable="false" weightx="1" weighty="1"></combobox>
 		<combobox name="comboAmPm" editable="false" weightx="1" weighty="1"></combobox>
 		<textfield name="textDate" columns="30" weightx="1" weighty="1" editable="false"/>
         <button name="buttonDate" action="showDateSelecter(textDate)" icon="/icons/date.png"/>
-    </panel>   
-
+    </panel> 
+    
     <label name="labelRecipients" icon="/icons/user.png" text="i18n.common.recipient" valign="top"/>
     <panel name="panelRecipients" border="false" colspan="2" weightx="1" weighty="1" columns="1" gap="10">
 	    <table name="tableRecipients" selection="multiple" weightx="1" weighty="1">
@@ -33,7 +39,7 @@
     <label name="labelInfo" valign="top" colspan="3"/>
     
     <panel name="panelButtons" gap="5" colspan="3">
-	    <button name="buttonSave" action="createReminder(dialogReminderForm,tableRecipients,textDate,comboHour,comboMinute,comboAmPm,checkboxEmail,textSubject,textMessage)" icon="/icons/tick.png" text="i18n.action.save" weightx="1" weighty="1"/>
+	    <button name="buttonSave" action="createReminder(dialogReminderForm,tableRecipients,textDate,comboOccurance,comboHour,comboMinute,comboAmPm,checkboxEmail,textSubject,textMessage)" icon="/icons/tick.png" text="i18n.action.save" weightx="1" weighty="1"/>
 	    <button name="buttonCancel" action="removeDialog(dialogReminderForm)" icon="/icons/cross.png" text="i18n.action.cancel" weightx="1" weighty="1"/>
     </panel>
 </dialog>

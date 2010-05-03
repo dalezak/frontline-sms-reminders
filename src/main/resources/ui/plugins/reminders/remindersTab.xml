@@ -2,10 +2,11 @@
     <panel name="panelReminders" bottom="9" columns="2" gap="9" left="9" right="9" top="9">
 		<label name="labelHeading" valign="top" icon="/icons/header/reminders.png" rowspan="3"/>
 		<panel name="panelTableReminders" border="false" rowspan="2" weightx="1" weighty="1" columns="1" gap="10">
-			<table name="tableReminders" selection="single" weightx="1" weighty="1" action="enableOptions(this, menuReminders, toolbarReminders)" perform="showReminderDialog(tableReminders)">
+			<table name="tableReminders" selection="multiple" weightx="1" weighty="1" action="enableOptions(this, menuReminders, toolbarReminders)" perform="showReminderDialog(tableReminders)">
 		        <header>
 		            <column icon="/icons/status.png" text="i18n.common.status" width="65"/>
-		            <column icon="/icons/file.png" text="i18n.common.type" width="57"/>
+		            <column icon="/icons/file.png" text="i18n.common.type" width="58"/>
+		            <column icon="/icons/date.png" text="Occurance" width="100"/>
 		            <column icon="/icons/time.png" text="i18n.common.date" width="140"/>
 		            <column icon="/icons/email_receive.png" text="i18n.common.recipient" width="210"/>
 		            <column icon="/icons/email_subject.png" text="i18n.common.subject" width="150"/>

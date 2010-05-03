@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Calendar;
 import java.util.List;
-import java.util.StringTokenizer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Timer;
@@ -12,7 +11,6 @@ import java.util.TimerTask;
 
 import net.frontlinesms.EmailServerHandler;
 import net.frontlinesms.FrontlineSMS;
-import net.frontlinesms.FrontlineSMSConstants;
 import net.frontlinesms.data.repository.ContactDao;
 import net.frontlinesms.data.repository.EmailAccountDao;
 import net.frontlinesms.data.repository.EmailDao;
@@ -82,6 +80,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	public static final String DIALOG_CONTACTS_MESSAGE = "textMessage";
 	
 	public static final String DIALOG_INFO_LABEL = "labelInfo";
+	public static final String DIALOG_COMBO_OCCURANCE = "comboOccurance";
 	public static final String DIALOG_COMBO_HOUR = "comboHour";
 	public static final String DIALOG_COMBO_MINUTE = "comboMinute";
 	public static final String DIALOG_COMBO_AM_PM = "comboAmPm";
@@ -134,14 +133,45 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		
 		public void run() {
 			log("ReminderTimerTask.run");
-			Calendar calendar = Calendar.getInstance();
+			Calendar now = Calendar.getInstance();
 			//TODO only retrieve pending reminders
 			for (Reminder reminder : this.reminderDao.getAllReminders()) {
-				if (reminder.getStatus() != Reminder.Status.SENT) {
-					if (calendar.getTimeInMillis() >= reminder.getDate()) {
-						log("Reminder Sent!");
+				Calendar date = Calendar.getInstance();
+				date.setTimeInMillis(reminder.getDate());
+				
+				if (reminder.getOccurance() == Reminder.Occurance.ONCE) {
+					if (reminder.getStatus() != Reminder.Status.SENT &&
+						now.getTimeInMillis() >= reminder.getDate()) {
+						log("Once Reminder Sent!");
 						sendReminder(reminder);
 					}
+				}
+				else if (reminder.getOccurance() == Reminder.Occurance.DAILY) {
+					if (now.get(Calendar.HOUR_OF_DAY) == date.get(Calendar.HOUR_OF_DAY) &&
+						now.get(Calendar.MINUTE) == date.get(Calendar.MINUTE)) {
+						log("Daily Reminder Sent!");
+						sendReminder(reminder);
+					}
+				}
+				else if (reminder.getOccurance() == Reminder.Occurance.WEEKLY) {
+					if (now.get(Calendar.HOUR_OF_DAY) == date.get(Calendar.HOUR_OF_DAY) &&
+						now.get(Calendar.MINUTE) == date.get(Calendar.MINUTE) &&
+						now.get(Calendar.DAY_OF_WEEK) == date.get(Calendar.DAY_OF_WEEK) &&
+						(now.get(Calendar.WEEK_OF_YEAR) >= date.get(Calendar.WEEK_OF_YEAR) ||
+						 now.get(Calendar.YEAR) > date.get(Calendar.YEAR))) {
+						log("Weekly Reminder Sent!");
+						sendReminder(reminder);
+					}				
+				}
+				else if (reminder.getOccurance() == Reminder.Occurance.MONTHLY) {
+					if (now.get(Calendar.HOUR_OF_DAY) == date.get(Calendar.HOUR_OF_DAY) &&
+						now.get(Calendar.MINUTE) == date.get(Calendar.MINUTE) &&
+						now.get(Calendar.DAY_OF_MONTH) == date.get(Calendar.DAY_OF_MONTH) &&
+						(now.get(Calendar.MONTH) >= date.get(Calendar.MONTH) ||
+						 now.get(Calendar.YEAR) > date.get(Calendar.YEAR))) {
+						log("Monthly Reminder Sent!");
+						sendReminder(reminder);
+					}	
 				}
 			}
 		}
@@ -190,6 +220,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		this.contactListPager.setCurrentPage(0);
 		this.contactListPager.refresh();
 		
+		Object comboOccurance = this.ui.find(reminderDialog, DIALOG_COMBO_OCCURANCE);
 		Object comboHour = this.ui.find(reminderDialog, DIALOG_COMBO_HOUR);
 		for (int hour = 1; hour <= 12 ; hour ++) {
 			this.ui.add(comboHour, this.ui.createComboboxChoice(Integer.toString(hour), hour));
@@ -220,6 +251,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 				}
 				this.ui.setSelectedIndex(comboMinute, calendar.get(Calendar.MINUTE));
 				this.ui.setSelectedIndex(comboAmPm, calendar.get(Calendar.AM_PM));
+				this.ui.setSelectedIndex(comboOccurance, Reminder.getIndexForOccurance(reminder.getOccurance()));
 				
 				Object checkboxEmail = this.ui.find(reminderDialog, DIALOG_CONTACTS_IS_EMAIL);
 				this.ui.setSelected(checkboxEmail, reminder.getType() == Reminder.Type.EMAIL);
@@ -247,6 +279,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 			}
 			this.ui.setSelectedIndex(comboMinute, calendar.get(Calendar.MINUTE));
 			this.ui.setSelectedIndex(comboAmPm, calendar.get(Calendar.AM_PM));
+			this.ui.setSelectedIndex(comboOccurance, Reminder.getIndexForOccurance(Reminder.Occurance.ONCE));
 		}
 	}
 	
@@ -291,7 +324,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		}
 	}
 	
-	public void createReminder(Object dialogReminderForm, Object tableRecipients, Object textDate, Object comboHour, Object comboMinute, Object comboAmPm, Object checkboxEmail, Object textSubject, Object textMessage) {
+	public void createReminder(Object dialogReminderForm, Object tableRecipients, Object textDate, Object comboOccurance, Object comboHour, Object comboMinute, Object comboAmPm, Object checkboxEmail, Object textSubject, Object textMessage) {
 		log("createReminder");
 		Object labelInfo = this.ui.find(dialogReminderForm, DIALOG_INFO_LABEL);
 		try {
@@ -308,6 +341,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 			int hour = this.ui.getSelectedIndex(comboHour) + 1;
 			int minute = this.ui.getSelectedIndex(comboMinute);
 			int am_pm = this.ui.getSelectedIndex(comboAmPm);
+			int occurance = this.ui.getSelectedIndex(comboOccurance);
 			String subject = this.ui.getText(textSubject);
 			String message = this.ui.getText(textMessage);
 			if (date.isEmpty()) {
@@ -349,10 +383,11 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 					reminder.setRecipients(recipients.toString());
 					reminder.setSubject(subject);
 					reminder.setContent(message);
+					reminder.setOccurance(Reminder.getOccuranceForIndex(occurance));
 					this.reminderDao.updateReminder(reminder);
 				}
 				else {
-					reminder = new Reminder(calendar.getTimeInMillis(), type, recipients.toString(), subject, message);
+					reminder = new Reminder(calendar.getTimeInMillis(), type, recipients.toString(), subject, message, Reminder.getOccuranceForIndex(occurance));
 					this.reminderDao.saveReminder(reminder);
 				}
 				this.ui.remove(dialogReminderForm);
@@ -385,7 +420,12 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 						this.emailDao.saveEmail(email);
 						this.emailManager.sendEmail(email);
 					}
-					reminder.setStatus(Reminder.Status.SENT);
+					if (reminder.getOccurance() == Reminder.Occurance.ONCE) {
+						reminder.setStatus(Reminder.Status.SENT);
+					}
+					else {
+						//TODO change status for other occurance modes
+					}
 				}
 				else {
 					log("Unable to send email, no EmailAccount specified");
@@ -399,7 +439,12 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 						this.frontlineController.sendTextMessage(contact.getPhoneNumber(), reminder.getContent());
 					}
 				}
-				reminder.setStatus(Reminder.Status.SENT);
+				if (reminder.getOccurance() == Reminder.Occurance.ONCE) {
+					reminder.setStatus(Reminder.Status.SENT);
+				}
+				else {
+					//TODO change status for other occurance modes
+				}
 			}
 			this.reminderDao.updateReminder(reminder);
 		}
@@ -478,6 +523,10 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		}
 		ui.setChoice(typeCell, ThinletText.ALIGNMENT, ThinletText.CENTER);
 		ui.add(row, typeCell);
+		
+		Object occuranceCell = ui.createTableCell(reminder.getOccuranceLabel());
+		ui.setChoice(occuranceCell, ThinletText.ALIGNMENT, ThinletText.CENTER);
+		ui.add(row, occuranceCell);
 		
 		DateFormat dateFormat = InternationalisationUtils.getDatetimeFormat();
 		Date date = new Date(reminder.getDate());
