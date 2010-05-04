@@ -206,9 +206,12 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 			log("Deleting Reminder:" + reminder);
 			if (reminder != null) {
 				this.reminderDao.deleteReminder(reminder);
-			}
-			else {
-				throw new NullPointerException();
+				if (reminder.getType() == Reminder.Type.EMAIL) {
+					this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_CREATED));
+				}
+				else {
+					this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.SMS_REMINDER_CREATED));
+				}
 			}
 		}
 		this.ui.removeConfirmationDialog();
@@ -401,6 +404,12 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 					reminder.setContent(message);
 					reminder.setOccurrence(Reminder.getOccurrenceForIndex(occurrence));
 					this.reminderDao.updateReminder(reminder);
+					if (type == Reminder.Type.EMAIL) {
+						this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_UPDATED));
+					}
+					else {
+						this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.SMS_REMINDER_UPDATED));
+					}
 				}
 				else {
 					reminder = new Reminder(startDate,
@@ -411,6 +420,12 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 											message, 
 											Reminder.getOccurrenceForIndex(occurrence));
 					this.reminderDao.saveReminder(reminder);
+					if (type == Reminder.Type.EMAIL) {
+						this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_CREATED));
+					}
+					else {
+						this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.SMS_REMINDER_CREATED));
+					}
 				}
 				this.ui.remove(dialogReminderForm);
 			}
@@ -446,6 +461,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 						Calendar.getInstance().getTimeInMillis() >= reminder.getEndDate()) {
 						reminder.setStatus(Reminder.Status.SENT);
 					}
+					this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_SENT));
 				}
 				else {
 					this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_EMAIL_ACCOUNT));
@@ -463,6 +479,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 					Calendar.getInstance().getTimeInMillis() >= reminder.getEndDate()) {
 					reminder.setStatus(Reminder.Status.SENT);
 				}
+				this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.SMS_REMINDER_SENT));
 			}
 			this.reminderDao.updateReminder(reminder);
 		}

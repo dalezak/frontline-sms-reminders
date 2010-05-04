@@ -18,4 +18,12 @@ public final class RemindersConstants {
 	public static final String MISSING_EMAIL_ACCOUNT = "common.missing.email.account";
 	public static final String CREATE_REMINDER = "common.create.reminder";
 	public static final String EDIT_REMINDER = "common.edit.reminder";
+	public static final String EMAIL_REMINDER_CREATED = "common.email.reminder.created";
+	public static final String SMS_REMINDER_CREATED = "common.sms.reminder.created";
+	public static final String EMAIL_REMINDER_UPDATED = "common.email.reminder.updated";
+	public static final String SMS_REMINDER_UPDATED = "common.sms.reminder.updated";
+	public static final String EMAIL_REMINDER_DELETED = "common.email.reminder.deleted";
+	public static final String SMS_REMINDER_DELETED = "common.sms.reminder.deleted";
+	public static final String EMAIL_REMINDER_SENT = "common.email.reminder.sent";
+	public static final String SMS_REMINDER_SENT = "common.sms.reminder.sent";
 }
