@@ -12,7 +12,6 @@ import java.util.TimerTask;
 
 import net.frontlinesms.EmailServerHandler;
 import net.frontlinesms.FrontlineSMS;
-import net.frontlinesms.FrontlineSMSConstants;
 import net.frontlinesms.data.repository.ContactDao;
 import net.frontlinesms.data.repository.EmailAccountDao;
 import net.frontlinesms.data.repository.EmailDao;
@@ -52,34 +51,33 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	private final Timer timer;
 	private final TimerTask timerTask;
 	
-	private static final String TAB_XML_FILE = "/ui/plugins/reminders/remindersTab.xml";
-	private static final String DIALOG_XML_FILE = "/ui/plugins/reminders/remindersForm.xml";
+	private static final String TAB_XML = "/ui/plugins/reminders/remindersTab.xml";
+	private static final String DIALOG_XML = "/ui/plugins/reminders/remindersForm.xml";
 	
-	public static final String TAB_REMINDERS_TABLE = "tableReminders";
-	public static final String TAB_REMINDERS_TABLE_PANEL = "panelTableReminders";
-	public static final String TAB_REMINDERS_PANEL = "panelReminders";
-	public static final String TAB_REMINDERS_TOOLBAR = "toolbarReminders";
-	public static final String TAB_REMINDERS_MENU = "menuReminders";
+	public static final String TAB_TABLE = "tableReminders";
+	public static final String TAB_TABLE_PANEL = "panelTableReminders";
+	public static final String TAB_PANEL = "panelReminders";
+	public static final String TAB_TOOLBAR = "toolbarReminders";
+	public static final String TAB_MENU = "menuReminders";
 	
-	public static final String TAB_REMINDERS_MENU_CREATE = "menuCreateReminder";
-	public static final String TAB_REMINDERS_MENU_SEND = "menuSendReminder";
-	public static final String TAB_REMINDERS_MENU_EDIT = "menuEditReminder";
-	public static final String TAB_REMINDERS_MENU_DELETE = "menuDeleteReminder";
+	public static final String TAB_MENU_CREATE = "menuCreateReminder";
+	public static final String TAB_MENU_SEND = "menuSendReminder";
+	public static final String TAB_MENU_EDIT = "menuEditReminder";
+	public static final String TAB_MENU_DELETE = "menuDeleteReminder";
 	
-	public static final String TAB_REMINDERS_TOOLBAR_CREATE = "buttonCreateReminder";
-	public static final String TAB_REMINDERS_TOOLBAR_SEND = "buttonSendReminder";
-	public static final String TAB_REMINDERS_TOOLBAR_EDIT = "buttonEditReminder";
-	public static final String TAB_REMINDERS_TOOLBAR_DELETE = "buttonDeleteReminder";
+	public static final String TAB_TOOLBAR_CREATE = "buttonCreateReminder";
+	public static final String TAB_TOOLBAR_SEND = "buttonSendReminder";
+	public static final String TAB_TOOLBAR_EDIT = "buttonEditReminder";
+	public static final String TAB_TOOLBAR_DELETE = "buttonDeleteReminder";
 	
-	public static final String DIALOG_CONTACTS_TABLE = "tableRecipients";
-	public static final String DIALOG_CONTACTS_PANEL = "panelRecipients";
+	public static final String DIALOG_TABLE = "tableRecipients";
+	public static final String DIALOG_PANEL = "panelRecipients";
 	
-	public static final String DIALOG_CONTACTS_IS_EMAIL = "checkboxEmail";
-	public static final String DIALOG_CONTACTS_IS_MESSAGE = "checkboxMessage";
-	public static final String DIALOG_CONTACTS_SUBJECT = "textSubject";
-	public static final String DIALOG_CONTACTS_MESSAGE = "textMessage";
+	public static final String DIALOG_IS_EMAIL = "checkboxEmail";
+	public static final String DIALOG_IS_MESSAGE = "checkboxMessage";
+	public static final String DIALOG_SUBJECT = "textSubject";
+	public static final String DIALOG_MESSAGE = "textMessage";
 	
-	public static final String DIALOG_INFO_LABEL = "labelInfo";
 	public static final String DIALOG_COMBO_OCCURRENCE = "comboOccurrence";
 	
 	public static final String DIALOG_COMBO_HOUR_START = "comboHourStart";
@@ -94,9 +92,6 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	public static final String DIALOG_DATE_END = "textDateEnd";
 	public static final String DIALOG_BUTTON_DATE_END = "buttonDateEnd";
 	
-	public static final String CREATE_REMINDER = "Create Reminder";
-	public static final String EDIT_REMINDER = "Edit Reminder";
-	
 	private ComponentPagingHandler contactListPager;
 	private Object contactListComponent;
 	
@@ -107,7 +102,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		super(pluginController, uiController);
 		this.applicationContext = applicationContext;
 		
-		Object tabComponent = uiController.loadComponentFromFile(TAB_XML_FILE, this);
+		Object tabComponent = uiController.loadComponentFromFile(TAB_XML, this);
 		super.setTabComponent(tabComponent);
 		
 		this.reminderDao = (ReminderDao) applicationContext.getBean("reminderDao");
@@ -116,10 +111,10 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		this.emailAccountDao = this.ui.getFrontlineController().getEmailAccountFactory();
 		this.emailManager = this.ui.getFrontlineController().getEmailServerHandler();
 		
-		this.reminderListComponent = this.ui.find(tabComponent, TAB_REMINDERS_TABLE);
+		this.reminderListComponent = this.ui.find(tabComponent, TAB_TABLE);
 		this.reminderListPager = new ComponentPagingHandler(this.ui, this, reminderListComponent);
 		
-		Object panelReminders = this.ui.find(tabComponent, TAB_REMINDERS_TABLE_PANEL);
+		Object panelReminders = this.ui.find(tabComponent, TAB_TABLE_PANEL);
 		this.ui.add(panelReminders, this.reminderListPager.getPanel());
 		
 		this.reminderListPager.setCurrentPage(0);
@@ -228,16 +223,16 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 			if (name == null) { 
 				continue;
 			}
-			else if (name.equals(TAB_REMINDERS_MENU_CREATE)) {
+			else if (name.equals(TAB_MENU_CREATE)) {
 				this.ui.setEnabled(o, true);
 			}
-			else if (name.equals(TAB_REMINDERS_MENU_EDIT)) {
+			else if (name.equals(TAB_MENU_EDIT)) {
 				this.ui.setEnabled(o, hasSelection);
 			}
-			else if (name.equals(TAB_REMINDERS_MENU_DELETE)) {
+			else if (name.equals(TAB_MENU_DELETE)) {
 				this.ui.setEnabled(o, hasSelection);
 			}
-			else if (name.equals(TAB_REMINDERS_MENU_SEND)) {
+			else if (name.equals(TAB_MENU_SEND)) {
 				this.ui.setEnabled(o, hasSelection);
 			}
 		}
@@ -246,16 +241,16 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 			if (name == null) { 
 				continue;
 			}
-			else if (name.equals(TAB_REMINDERS_TOOLBAR_CREATE)) {
+			else if (name.equals(TAB_TOOLBAR_CREATE)) {
 				this.ui.setEnabled(o, true);
 			}
-			else if (name.equals(TAB_REMINDERS_TOOLBAR_EDIT)) {
+			else if (name.equals(TAB_TOOLBAR_EDIT)) {
 				this.ui.setEnabled(o, hasSelection);
 			}
-			else if (name.equals(TAB_REMINDERS_TOOLBAR_DELETE)) {
+			else if (name.equals(TAB_TOOLBAR_DELETE)) {
 				this.ui.setEnabled(o, hasSelection);
 			}
-			else if (name.equals(TAB_REMINDERS_TOOLBAR_SEND)) {
+			else if (name.equals(TAB_TOOLBAR_SEND)) {
 				this.ui.setEnabled(o, hasSelection);
 			}
 		}
@@ -267,10 +262,10 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	
 	public void showReminderDialog(Object reminderList) {
 		log("showReminderDialog");
-		Object reminderDialog = this.ui.loadComponentFromFile(DIALOG_XML_FILE, this);
-		Object panelContacts = this.ui.find(reminderDialog, DIALOG_CONTACTS_PANEL);
+		Object reminderDialog = this.ui.loadComponentFromFile(DIALOG_XML, this);
+		Object panelContacts = this.ui.find(reminderDialog, DIALOG_PANEL);
 		
-		this.contactListComponent = this.ui.find(reminderDialog, DIALOG_CONTACTS_TABLE);
+		this.contactListComponent = this.ui.find(reminderDialog, DIALOG_TABLE);
 		this.contactListPager = new ComponentPagingHandler(this.ui, this, this.contactListComponent);
 		
 		this.ui.add(panelContacts, this.contactListPager.getPanel());
@@ -316,32 +311,31 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 				setDateFields(reminder.getStartCalendar(), textDateStart, comboHourStart, comboMinuteStart, comboAmPmStart);
 				setDateFields(reminder.getEndCalendar(), textDateEnd, comboHourEnd, comboMinuteEnd, comboAmPmEnd);
 				
-				Object checkboxEmail = this.ui.find(reminderDialog, DIALOG_CONTACTS_IS_EMAIL);
+				Object checkboxEmail = this.ui.find(reminderDialog, DIALOG_IS_EMAIL);
 				this.ui.setSelected(checkboxEmail, reminder.getType() == Reminder.Type.EMAIL);
 				
-				Object checkboxMessage = this.ui.find(reminderDialog, DIALOG_CONTACTS_IS_MESSAGE);
+				Object checkboxMessage = this.ui.find(reminderDialog, DIALOG_IS_MESSAGE);
 				this.ui.setSelected(checkboxMessage, reminder.getType() == Reminder.Type.MESSAGE);
 				
-				Object textSubject = this.ui.find(reminderDialog, DIALOG_CONTACTS_SUBJECT);
+				Object textSubject = this.ui.find(reminderDialog, DIALOG_SUBJECT);
 				this.ui.setText(textSubject, reminder.getSubject());
 				
-				Object textMessage = this.ui.find(reminderDialog, DIALOG_CONTACTS_MESSAGE);
+				Object textMessage = this.ui.find(reminderDialog, DIALOG_MESSAGE);
 				this.ui.setText(textMessage, reminder.getContent());
 			}
-			this.ui.setText(reminderDialog, EDIT_REMINDER);
+			this.ui.setText(reminderDialog, InternationalisationUtils.getI18NString(RemindersConstants.EDIT_REMINDER));
 		}
 		else {
 			Calendar now = Calendar.getInstance();
 			setDateFields(now, textDateStart, comboHourStart, comboMinuteStart, comboAmPmStart);
 			setDateFields(now, textDateEnd, comboHourEnd, comboMinuteEnd, comboAmPmEnd);
 			this.ui.setSelectedIndex(comboOccurrence, Reminder.getIndexForOccurrence(Reminder.Occurrence.ONCE));
-			this.ui.setText(reminderDialog, CREATE_REMINDER);
+			this.ui.setText(reminderDialog, InternationalisationUtils.getI18NString(RemindersConstants.CREATE_REMINDER));
 		}
 	}
 	
 	public void saveReminder(Object dialogReminderForm, Object tableRecipients) {
 		log("saveReminder");
-		Object labelInfo = this.ui.find(dialogReminderForm, DIALOG_INFO_LABEL);
 		Object comboOccurrence = this.ui.find(dialogReminderForm, DIALOG_COMBO_OCCURRENCE);
 		
 		Object comboHourStart = this.ui.find(dialogReminderForm, DIALOG_COMBO_HOUR_START);
@@ -356,10 +350,10 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		Object textDateStart = this.ui.find(dialogReminderForm, DIALOG_DATE_START);
 		Object textDateEnd = this.ui.find(dialogReminderForm, DIALOG_DATE_END);
 		
-		Object checkboxEmail = this.ui.find(dialogReminderForm, DIALOG_CONTACTS_IS_EMAIL);
+		Object checkboxEmail = this.ui.find(dialogReminderForm, DIALOG_IS_EMAIL);
 		
-		Object textSubject = this.ui.find(dialogReminderForm, DIALOG_CONTACTS_SUBJECT);
-		Object textMessage = this.ui.find(dialogReminderForm, DIALOG_CONTACTS_MESSAGE);
+		Object textSubject = this.ui.find(dialogReminderForm, DIALOG_SUBJECT);
+		Object textMessage = this.ui.find(dialogReminderForm, DIALOG_MESSAGE);
 		try {
 			Type type = this.ui.isSelected(checkboxEmail) ? Type.EMAIL : Type.MESSAGE;
 			StringBuilder recipients = new StringBuilder();
@@ -375,29 +369,26 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 			long endDate = getLongFromDateFields(textDateEnd, comboHourEnd, comboMinuteEnd, comboAmPmEnd);
 			String subject = (type == Reminder.Type.EMAIL) ? this.ui.getText(textSubject) : "";
 			String message = this.ui.getText(textMessage);
-			if (startDate == 0) {
-				//TODO load text from property file
-				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_START_DATE));
+			if (type == Type.EMAIL && this.emailAccountDao.getAllEmailAccounts().size() == 0) {
+				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_EMAIL_ACCOUNT));
+			}
+			else if (startDate == 0) {
+				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_START_DATE));
 			}
 			else if (occurrence > 0 && endDate == 0) {
-				//TODO load text from property file
-				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_END_DATE));
+				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_END_DATE));
 			}
 			else if (occurrence > 0 && startDate > endDate) {
-				//TODO load text from property file
-				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_DATE_RANGE));
+				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_DATE_RANGE));
 			}
 			else if (recipients.length() == 0) {
-				//TODO load text from property file
-				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_RECIPIENT));
+				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_RECIPIENT));
 			}
 			else if (type == Type.EMAIL && subject.isEmpty()) {
-				//TODO load text from property file
-				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_SUBJECT));
+				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_SUBJECT));
 			}
 			else if (message.isEmpty()) {
-				//TODO load text from property file
-				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_MESSAGE));
+				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_MESSAGE));
 			}
 			else {
 				Reminder reminder = this.ui.getAttachedObject(dialogReminderForm, Reminder.class);
@@ -425,7 +416,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 			}
 		} catch (Exception ex) {
 			log(ex);
-			this.ui.setText(labelInfo, "Error: " + ex.getMessage());
+			this.ui.alert(ex.getMessage());
 		}
 		this.reminderListPager.refresh();
 	}
@@ -457,7 +448,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 					}
 				}
 				else {
-					log("Unable to send email, no EmailAccount specified");
+					this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_EMAIL_ACCOUNT));
 				}
 			}
 			else if (reminder.getType() == Reminder.Type.MESSAGE) {
@@ -480,10 +471,10 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	
 	public void typeChanged(Object checkbox, Object textSubject, Object textMessage) {
 		log("typeChanged");
-		if (DIALOG_CONTACTS_IS_EMAIL.equalsIgnoreCase(ui.getName(checkbox))) {
+		if (DIALOG_IS_EMAIL.equalsIgnoreCase(ui.getName(checkbox))) {
 			this.ui.setEnabled(textSubject, true);
 		}
-		else if (DIALOG_CONTACTS_IS_MESSAGE.equalsIgnoreCase(ui.getName(checkbox))) {
+		else if (DIALOG_IS_MESSAGE.equalsIgnoreCase(ui.getName(checkbox))) {
 			this.ui.setEnabled(textSubject, false);
 			this.ui.setText(textSubject, "");
 		}
@@ -523,14 +514,14 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	
 	public PagedListDetails getListDetails(Object list, int startIndex, int limit) {
 		log("getListDetails:" + ui.getName(list));
-		if (DIALOG_CONTACTS_TABLE.equalsIgnoreCase(ui.getName(list))) {
+		if (DIALOG_TABLE.equalsIgnoreCase(ui.getName(list))) {
 			final Object selected = this.ui.getSelectedItem(this.reminderListComponent);
 			Reminder reminder = this.ui.getAttachedObject(selected, Reminder.class);
 			List<Contact> contacts = this.contactDao.getAllContacts(startIndex, limit);
 			Object[] listItems = toThinletContacts(contacts, reminder);
 			return new PagedListDetails(listItems.length, listItems);
 		}
-		else if (TAB_REMINDERS_TABLE.equalsIgnoreCase(ui.getName(list))) {
+		else if (TAB_TABLE.equalsIgnoreCase(ui.getName(list))) {
 			List<Reminder> reminders = this.reminderDao.getAllReminders(startIndex, limit);
 			Object[] listItems = toThinletReminders(reminders);
 			return new PagedListDetails(listItems.length, listItems);

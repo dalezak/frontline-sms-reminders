@@ -15,4 +15,7 @@ public final class RemindersConstants {
 	public static final String MISSING_RECIPIENT = "common.missing.recipient";
 	public static final String MISSING_SUBJECT = "common.missing.subject";
 	public static final String MISSING_MESSAGE = "common.missing.message";
+	public static final String MISSING_EMAIL_ACCOUNT = "common.missing.email.account";
+	public static final String CREATE_REMINDER = "common.create.reminder";
+	public static final String EDIT_REMINDER = "common.edit.reminder";
 }

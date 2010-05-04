@@ -48,8 +48,6 @@
     <label name="labelMessage" icon="/icons/message.png" text="i18n.common.message" valign="top"/>
     <textarea name="textMessage" colspan="2" rows="7" columns="75"/>
     
-    <label name="labelInfo" valign="top" colspan="3"/>
-    
     <panel name="panelButtons" gap="5" colspan="3">
 	    <button name="buttonSave" action="saveReminder(dialogReminderForm,tableRecipients)" icon="/icons/tick.png" text="i18n.action.save" weightx="1" weighty="1"/>
 	    <button name="buttonCancel" action="removeDialog(dialogReminderForm)" icon="/icons/cross.png" text="i18n.action.cancel" weightx="1" weighty="1"/>
