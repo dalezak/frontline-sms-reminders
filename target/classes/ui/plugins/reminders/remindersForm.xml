@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dialog name="dialogReminderForm" icon="/icons/reminders.png" text="Reminder" modal="true" resizable="true" closable="true" close="removeDialog(this)" bottom="10" top="10" left="10" right="10" columns="3" gap="13">
-    <label name="labelDate" icon="/icons/date_time_start.png" text="i18n.common.date" valign="top"/>
+    <label name="labelDate" icon="/icons/date.png" text="i18n.common.date" valign="top"/>
     <panel name="panelDate" colspan="2" columns="6" gap="10">
-    	<combobox name="comboOccurance" editable="false" weightx="1" weighty="1" selected="0">
+    	<combobox name="comboOccurrence" editable="false" weightx="1" weighty="1" selected="0">
         	<choice text="Once"/>
+        	<choice text="Hourly"/>
         	<choice text="Daily"/>
         	<choice text="Weekly"/>
         	<choice text="Monthly"/>
@@ -39,7 +40,7 @@
     <label name="labelInfo" valign="top" colspan="3"/>
     
     <panel name="panelButtons" gap="5" colspan="3">
-	    <button name="buttonSave" action="createReminder(dialogReminderForm,tableRecipients,textDate,comboOccurance,comboHour,comboMinute,comboAmPm,checkboxEmail,textSubject,textMessage)" icon="/icons/tick.png" text="i18n.action.save" weightx="1" weighty="1"/>
+	    <button name="buttonSave" action="saveReminder(dialogReminderForm,tableRecipients,textDate,comboOccurrence,comboHour,comboMinute,comboAmPm,checkboxEmail,textSubject,textMessage)" icon="/icons/tick.png" text="i18n.action.save" weightx="1" weighty="1"/>
 	    <button name="buttonCancel" action="removeDialog(dialogReminderForm)" icon="/icons/cross.png" text="i18n.action.cancel" weightx="1" weighty="1"/>
     </panel>
 </dialog>

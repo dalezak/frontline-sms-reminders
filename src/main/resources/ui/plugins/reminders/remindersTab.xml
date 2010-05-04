@@ -6,7 +6,7 @@
 		        <header>
 		            <column icon="/icons/status.png" text="i18n.common.status" width="65"/>
 		            <column icon="/icons/file.png" text="i18n.common.type" width="58"/>
-		            <column icon="/icons/date.png" text="Occurance" width="100"/>
+		            <column icon="/icons/date.png" text="Occurrence" width="100"/>
 		            <column icon="/icons/time.png" text="i18n.common.date" width="140"/>
 		            <column icon="/icons/email_receive.png" text="i18n.common.recipient" width="210"/>
 		            <column icon="/icons/email_subject.png" text="i18n.common.subject" width="150"/>

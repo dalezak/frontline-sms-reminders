@@ -50,8 +50,8 @@ public class Reminder {
 	private static final String COLUMN_SUBJECT = "subject";
 	/** Column name for {@link #content} */
 	private static final String COLUMN_CONTENT = "content";
-	/** Column name for {@link #occurance} */
-	private static final String COLUMN_OCCURANCE = "occurance";
+	/** Column name for {@link #occurrence} */
+	private static final String COLUMN_OCCURRENCE = "occurrence";
 	
 //> ENTITY FIELDS
 	/** Details of the fields that this class has. */
@@ -68,8 +68,8 @@ public class Reminder {
 		SUBJECT(COLUMN_SUBJECT),
 		/** field mapping for {@link Reminder#content} */
 		CONTENT(COLUMN_CONTENT),
-		/** field mapping for {@link Reminder#occurance} */
-		OCCURANCE(COLUMN_OCCURANCE);
+		/** field mapping for {@link Reminder#occurrence} */
+		OCCURRENCE(COLUMN_OCCURRENCE);
 		/** name of a field */
 		private final String fieldName;
 		/**
@@ -96,9 +96,11 @@ public class Reminder {
 		SENT
 	}
 	
-	public enum Occurance {
+	public enum Occurrence {
 		/** Occuring Once */
 		ONCE,
+		/** Occuring Hourly */
+		HOURLY,
 		/** Occuring Daily */
 		DAILY,
 		/** Occuring Weekly */
@@ -138,9 +140,9 @@ public class Reminder {
 	@Column(name=COLUMN_RECIPIENTS)
 	private String recipients;
 	
-	/** Occurance of the reminder */
-	@Column(name=COLUMN_OCCURANCE)
-	private Occurance occurance;
+	/** Occurrence of the reminder */
+	@Column(name=COLUMN_OCCURRENCE)
+	private Occurrence occurrence;
 
 //> CONSTRUCTORS
 	/** Empty constructor required for hibernate. */
@@ -153,13 +155,13 @@ public class Reminder {
 	 * @param subject The reminder subject
 	 * @param content The reminder content
 	 */
-	public Reminder(long date, Type type, String recipients, String subject, String content, Occurance occurance) {
+	public Reminder(long date, Type type, String recipients, String subject, String content, Occurrence occurrence) {
 		this.type = type;
 		this.date = date;
 		this.recipients = recipients;
 		this.subject = subject;
 		this.content = content;
-		this.occurance = occurance;
+		this.occurrence = occurrence;
 	}
 	
 //> ACCESSOR METHODS
@@ -213,55 +215,65 @@ public class Reminder {
 	}
 	
 	/**
-	 * sets the occurance of this Reminder.  Should be one of the Reminder.OCCURANCE_ constants.
-	 * @param occurance new value for {@link #occurance}
+	 * sets the occurrence of this Reminder.  Should be one of the Reminder.OCCURRENCE_ constants.
+	 * @param occurrence new value for {@link #occurrence}
 	 */
-	public void setOccurance(Occurance occurance) {
-		this.occurance = occurance;
+	public void setOccurrence(Occurrence occurrence) {
+		this.occurrence = occurrence;
 	}
-
 
 	/**
-	 * Gets the occurance of this Reminder.  Should be one of the Reminder.OCCURANCE_ constants.
-	 * @return {@link #occurance}
+	 * Gets the Occurrence of this Reminder.  Should be one of the Reminder.OCCURRENCE_ constants.
+	 * @return {@link #occurrence}
 	 */
-	public Occurance getOccurance() {
-		return this.occurance;
+	public Occurrence getOccurrence() {
+		return this.occurrence;
 	}
 	
-	public String getOccuranceLabel() {
-		if (this.getOccurance() == Reminder.Occurance.ONCE) {
+	public String getOccurrenceLabel() {
+		if (this.getOccurrence() == Reminder.Occurrence.ONCE) {
+			//TODO change to property file
 			return "Once";
 		}
-		else if (this.getOccurance() == Reminder.Occurance.DAILY) {
+		else if (this.getOccurrence() == Reminder.Occurrence.HOURLY) {
+			//TODO change to property file
+			return "Hourly";
+		}
+		else if (this.getOccurrence() == Reminder.Occurrence.DAILY) {
+			//TODO change to property file
 			return "Daily";
 		}
-		else if (this.getOccurance() == Reminder.Occurance.WEEKLY) {
+		else if (this.getOccurrence() == Reminder.Occurrence.WEEKLY) {
+			//TODO change to property file
 			return "Weekly";
 		}
-		else if (this.getOccurance() == Reminder.Occurance.MONTHLY) {
+		else if (this.getOccurrence() == Reminder.Occurrence.MONTHLY) {
+			//TODO change to property file
 			return "Monthly";
 		}
 		else {
+			//TODO change to property file
 			return "Once";
 		}
 	}
 	
-	public static Occurance getOccuranceForIndex(int index) {
+	public static Occurrence getOccurrenceForIndex(int index) {
 		switch(index) {
-			case 0 : return Occurance.ONCE;
-			case 1 : return Occurance.DAILY;
-			case 2 : return Occurance.WEEKLY;
-			case 3 : return Occurance.MONTHLY;
-			default: return Occurance.ONCE;
+			case 0 : return Occurrence.ONCE;
+			case 1 : return Occurrence.HOURLY;
+			case 2 : return Occurrence.DAILY;
+			case 3 : return Occurrence.WEEKLY;
+			case 4 : return Occurrence.MONTHLY;
+			default: return Occurrence.ONCE;
 		}
 	}
 	
-	public static int getIndexForOccurance(Occurance occurance) {
-		if (occurance == Occurance.ONCE) return 0;
-		if (occurance == Occurance.DAILY) return 1;
-		if (occurance == Occurance.WEEKLY) return 2;
-		if (occurance == Occurance.WEEKLY) return 3;
+	public static int getIndexForOccurrence(Occurrence occurrence) {
+		if (occurrence == Occurrence.ONCE) return 0;
+		if (occurrence == Occurrence.HOURLY) return 1;
+		if (occurrence == Occurrence.DAILY) return 2;
+		if (occurrence == Occurrence.WEEKLY) return 3;
+		if (occurrence == Occurrence.MONTHLY) return 4;
 		return 0;
 	}
 	
@@ -341,6 +353,10 @@ public class Reminder {
 		} else if (!content.equals(other.content))
 			return false;
 		if (date != other.date)
+			return false;
+		if (type != other.type)
+			return false;
+		if (occurrence != other.occurrence)
 			return false;
 		if (recipients == null) {
 			if (other.recipients != null)
