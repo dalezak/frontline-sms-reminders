@@ -12,6 +12,7 @@ import java.util.TimerTask;
 
 import net.frontlinesms.EmailServerHandler;
 import net.frontlinesms.FrontlineSMS;
+import net.frontlinesms.FrontlineSMSConstants;
 import net.frontlinesms.data.repository.ContactDao;
 import net.frontlinesms.data.repository.EmailAccountDao;
 import net.frontlinesms.data.repository.EmailDao;
@@ -376,27 +377,27 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 			String message = this.ui.getText(textMessage);
 			if (startDate == 0) {
 				//TODO load text from property file
-				this.ui.setText(labelInfo, "Missing Field: Start Date is required");
+				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_START_DATE));
 			}
 			else if (occurrence > 0 && endDate == 0) {
 				//TODO load text from property file
-				this.ui.setText(labelInfo, "Missing Field: End Date is required");
+				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_END_DATE));
 			}
 			else if (occurrence > 0 && startDate > endDate) {
 				//TODO load text from property file
-				this.ui.setText(labelInfo, "Missing Field: End Date must be after Start Date");
+				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_DATE_RANGE));
 			}
 			else if (recipients.length() == 0) {
 				//TODO load text from property file
-				this.ui.setText(labelInfo, "Missing Field: At least one recipient is required");
+				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_RECIPIENT));
 			}
 			else if (type == Type.EMAIL && subject.isEmpty()) {
 				//TODO load text from property file
-				this.ui.setText(labelInfo, "Missing Field: Subject is required");
+				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_SUBJECT));
 			}
 			else if (message.isEmpty()) {
 				//TODO load text from property file
-				this.ui.setText(labelInfo, "Missing Field: Message is required");
+				this.ui.setText(labelInfo, InternationalisationUtils.getI18NString(RemindersConstants.MISSING_MESSAGE));
 			}
 			else {
 				Reminder reminder = this.ui.getAttachedObject(dialogReminderForm, Reminder.class);

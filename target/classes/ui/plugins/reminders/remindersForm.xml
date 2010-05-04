@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<dialog name="dialogReminderForm" icon="/icons/reminders.png" text="Reminder" modal="true" resizable="true" closable="true" close="removeDialog(this)" bottom="10" top="10" left="10" right="10" columns="3" gap="13">
-    <label name="labelDate" icon="/icons/task.png" text="Occurrence" valign="top"/>
+<dialog name="dialogReminderForm" icon="/icons/reminders.png" text="i18n.common.reminder" modal="true" resizable="true" closable="true" close="removeDialog(this)" bottom="10" top="10" left="10" right="10" columns="3" gap="13">
+    <label name="labelDate" icon="/icons/task.png" text="i18n.common.occurrence" valign="top"/>
     <combobox name="comboOccurrence" action="occurrenceChanged(dialogReminderForm, this)" colspan="2" editable="false" weightx="1" weighty="1" selected="0">
-       	<choice text="Once"/>
-       	<choice text="Hourly"/>
-       	<choice text="Daily"/>
-       	<choice text="Weekly"/>
-       	<choice text="Monthly"/>
+       	<choice text="i18n.common.once"/>
+       	<choice text="i18n.common.hourly"/>
+       	<choice text="i18n.common.daily"/>
+       	<choice text="i18n.common.weekly"/>
+       	<choice text="i18n.common.monthly"/>
    	</combobox>
     
     <label name="labelDate" icon="/icons/date_start.png" text="i18n.common.start.date" valign="top"/>
