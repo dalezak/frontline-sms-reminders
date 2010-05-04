@@ -20,6 +20,7 @@
 package net.frontlinesms.plugins.reminders.data.domain;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -40,8 +41,10 @@ public class Reminder {
 //> COLUMN_CONSTANTS
 	/** Column name for {@link #status} */
 	private static final String COLUMN_STATUS = "status";
-	/** Column name for {@link #date} */
-	private static final String COLUMN_DATE = "date";
+	/** Column name for {@link #startdate} */
+	private static final String COLUMN_STARTDATE = "startdate";
+	/** Column name for {@link #startdate} */
+	private static final String COLUMN_ENDDATE = "enddate";
 	/** Column name for {@link #status} */
 	private static final String COLUMN_TYPE = "type";
 	/** Column name for {@link #recipients} */
@@ -58,8 +61,10 @@ public class Reminder {
 	public enum Field implements EntityField<Reminder> {
 		/** field mapping for {@link Reminder#status} */
 		STATUS(COLUMN_STATUS),
-		/** field mapping for {@link Reminder#date} */
-		DATE(COLUMN_DATE),
+		/** field mapping for {@link Reminder#startdate} */
+		STARTDATE(COLUMN_STARTDATE),
+		/** field mapping for {@link Reminder#enddate} */
+		ENDDATE(COLUMN_ENDDATE),
 		/** field mapping for {@link Reminder#type} */
 		TYPE(COLUMN_TYPE),
 		/** field mapping for {@link Reminder#sender} */
@@ -131,11 +136,15 @@ public class Reminder {
 	/** Content of the reminder */
 	@Column(name=COLUMN_CONTENT)
 	private String content;
+	
+	/** Start Date of the reminder */
+//	@Column(name=COLUMN_STARTDATE)
+	private long startdate;
 
-	/** Date of the reminder */
-	@Column(name=COLUMN_DATE)
-	private long date;
-
+	/** End Date of the reminder */
+//	@Column(name=COLUMN_ENDDATE)
+	private long enddate;
+	
 	/** Recipient of the reminder */
 	@Column(name=COLUMN_RECIPIENTS)
 	private String recipients;
@@ -155,9 +164,10 @@ public class Reminder {
 	 * @param subject The reminder subject
 	 * @param content The reminder content
 	 */
-	public Reminder(long date, Type type, String recipients, String subject, String content, Occurrence occurrence) {
+	public Reminder(long startdate, long enddate, Type type, String recipients, String subject, String content, Occurrence occurrence) {
 		this.type = type;
-		this.date = date;
+		this.startdate = startdate;
+		this.enddate = enddate;
 		this.recipients = recipients;
 		this.subject = subject;
 		this.content = content;
@@ -277,17 +287,16 @@ public class Reminder {
 		return 0;
 	}
 	
+	public int getOccurrenceIndex() {
+		return Reminder.getIndexForOccurrence(this.occurrence);
+	}
+	
 	/**
 	 * Gets the text content of this reminder.
 	 * @return {@link #content}
 	 */
 	public String getContent() {
 		return this.content;
-	}
-
-	/** @param date new value for {@link #date} */
-	public void setDate(long date) {
-		this.date = date;
 	}
 	
 	/**
@@ -307,7 +316,7 @@ public class Reminder {
 		return recipientsArray.toArray(new String[recipientsArray.size()]);
 	}
 	
-		/**
+	/**
 	 * Gets this action reminder subject.
 	 * @return  {@link #subject}
 	 */
@@ -315,12 +324,42 @@ public class Reminder {
 		return this.subject;
 	}
 
+	/** @param start date new value for {@link #startdate} */
+	public void setStartDate(long startdate) {
+		this.startdate = startdate;
+	}
+	
 	/**
-	 * Gets the date at which this reminder was sent.
-	 * @return {@link #date}
+	 * Gets the start date at which this reminder was sent.
+	 * @return {@link #startdate}
 	 */
-	public long getDate() {
-		return this.date;
+	public long getStartDate() {
+		return this.startdate;
+	}
+	
+	public Calendar getStartCalendar() {
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTimeInMillis(this.startdate);
+		return calendar;
+	}
+	
+	/** @param end date new value for {@link #enddate} */
+	public void setEndDate(long enddate) {
+		this.enddate = enddate;
+	}
+	
+	/**
+	 * Gets the end date at which this reminder was sent.
+	 * @return {@link #enddate}
+	 */
+	public long getEndDate() {
+		return this.enddate;
+	}
+	
+	public Calendar getEndCalendar() {
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTimeInMillis(this.enddate);
+		return calendar;
 	}
 	
 //> GENERATED CODE
@@ -330,9 +369,9 @@ public class Reminder {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((content == null) ? 0 : content.hashCode());
-		result = prime * result + (int) (date ^ (date >>> 32));
-		result = prime * result
-				+ ((recipients == null) ? 0 : recipients.hashCode());
+		result = prime * result + (int) (startdate ^ (startdate >>> 32));
+		result = prime * result + (int) (enddate ^ (enddate >>> 32));
+		result = prime * result + ((recipients == null) ? 0 : recipients.hashCode());
 		result = prime * result + ((subject == null) ? 0 : subject.hashCode());
 		return result;
 	}
@@ -340,34 +379,29 @@ public class Reminder {
 	/** @see java.lang.Object#equals(java.lang.Object) */
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
+		if (this == obj) return true;
+		if (obj == null) return false;
+		if (getClass() != obj.getClass()) return false;
 		Reminder other = (Reminder) obj;
 		if (content == null) {
-			if (other.content != null)
-				return false;
-		} else if (!content.equals(other.content))
+			if (other.content != null) return false;
+		} else if (!content.equals(other.content)) {
 			return false;
-		if (date != other.date)
-			return false;
-		if (type != other.type)
-			return false;
-		if (occurrence != other.occurrence)
-			return false;
+		}
+		if (startdate != other.startdate) return false;
+		if (enddate != other.enddate) return false;
+		if (type != other.type) return false;
+		if (occurrence != other.occurrence) return false;
 		if (recipients == null) {
 			if (other.recipients != null)
 				return false;
 		} else if (!recipients.equals(other.recipients))
 			return false;
 		if (subject == null) {
-			if (other.subject != null)
-				return false;
-		} else if (!subject.equals(other.subject))
+			if (other.subject != null) return false;
+		} else if (!subject.equals(other.subject)) {
 			return false;
+		}
 		return true;
 	}
 }

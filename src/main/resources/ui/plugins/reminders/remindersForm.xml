@@ -1,19 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dialog name="dialogReminderForm" icon="/icons/reminders.png" text="Reminder" modal="true" resizable="true" closable="true" close="removeDialog(this)" bottom="10" top="10" left="10" right="10" columns="3" gap="13">
-    <label name="labelDate" icon="/icons/date.png" text="i18n.common.date" valign="top"/>
-    <panel name="panelDate" colspan="2" columns="6" gap="10">
-    	<combobox name="comboOccurrence" editable="false" weightx="1" weighty="1" selected="0">
-        	<choice text="Once"/>
-        	<choice text="Hourly"/>
-        	<choice text="Daily"/>
-        	<choice text="Weekly"/>
-        	<choice text="Monthly"/>
-        </combobox>
-        <combobox name="comboHour" editable="false" weightx="1" weighty="1"></combobox>
-		<combobox name="comboMinute" editable="false" weightx="1" weighty="1"></combobox>
-		<combobox name="comboAmPm" editable="false" weightx="1" weighty="1"></combobox>
-		<textfield name="textDate" columns="30" weightx="1" weighty="1" editable="false"/>
-        <button name="buttonDate" action="showDateSelecter(textDate)" icon="/icons/date.png"/>
+    <label name="labelDate" icon="/icons/task.png" text="Occurrence" valign="top"/>
+    <combobox name="comboOccurrence" action="occurrenceChanged(dialogReminderForm, this)" colspan="2" editable="false" weightx="1" weighty="1" selected="0">
+       	<choice text="Once"/>
+       	<choice text="Hourly"/>
+       	<choice text="Daily"/>
+       	<choice text="Weekly"/>
+       	<choice text="Monthly"/>
+   	</combobox>
+    
+    <label name="labelDate" icon="/icons/date_start.png" text="i18n.common.start.date" valign="top"/>
+    <panel name="panelDate" colspan="2" columns="5" gap="10">
+    	<combobox name="comboHourStart" editable="false" weightx="1" weighty="1"/>
+		<combobox name="comboMinuteStart" editable="false" weightx="1" weighty="1"/>
+		<combobox name="comboAmPmStart" editable="false" weightx="1" weighty="1"/>
+		<textfield name="textDateStart" editable="false" weightx="1" weighty="1" />
+        <button name="buttonDateStart" action="showDateSelecter(textDateStart)" icon="/icons/date_start.png"/>
+    </panel> 
+    
+    <label name="labelDateEnd" icon="/icons/date_end.png" text="i18n.common.end.date" valign="top"/>
+    <panel name="panelDateEnd" colspan="2" columns="5" gap="10">
+    	<combobox name="comboHourEnd" editable="false" enabled="false" weightx="1" weighty="1"/>
+		<combobox name="comboMinuteEnd" editable="false" enabled="false" weightx="1" weighty="1" />
+		<combobox name="comboAmPmEnd" editable="false" enabled="false" weightx="1" weighty="1"/>
+		<textfield name="textDateEnd" editable="false" enabled="false" weightx="1" weighty="1"/>
+        <button name="buttonDateEnd" action="showDateSelecter(textDateEnd)" icon="/icons/date_end.png" enabled="false"/>
     </panel> 
     
     <label name="labelRecipients" icon="/icons/user.png" text="i18n.common.recipient" valign="top"/>
@@ -40,7 +51,7 @@
     <label name="labelInfo" valign="top" colspan="3"/>
     
     <panel name="panelButtons" gap="5" colspan="3">
-	    <button name="buttonSave" action="saveReminder(dialogReminderForm,tableRecipients,textDate,comboOccurrence,comboHour,comboMinute,comboAmPm,checkboxEmail,textSubject,textMessage)" icon="/icons/tick.png" text="i18n.action.save" weightx="1" weighty="1"/>
+	    <button name="buttonSave" action="saveReminder(dialogReminderForm,tableRecipients)" icon="/icons/tick.png" text="i18n.action.save" weightx="1" weighty="1"/>
 	    <button name="buttonCancel" action="removeDialog(dialogReminderForm)" icon="/icons/cross.png" text="i18n.action.cancel" weightx="1" weighty="1"/>
     </panel>
 </dialog>
