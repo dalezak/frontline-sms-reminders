@@ -1,4 +1,4 @@
-<tab icon="/icons/big_reminders.png" text="i18n.common.reminders" name=":reminders">
+<tab icon="/icons/big_reminders.png" text="i18n.plugins.reminders.reminders" name=":reminders">
     <panel name="panelReminders" bottom="9" columns="2" gap="9" left="9" right="9" top="9">
 		<label name="labelHeading" valign="top" icon="/icons/header/reminders.png" rowspan="3"/>
 		<panel name="panelTableReminders" border="false" rowspan="2" weightx="1" weighty="1" columns="1" gap="10">
@@ -6,7 +6,7 @@
 		        <header>
 		            <column icon="/icons/status.png" text="i18n.common.status" width="65"/>
 		            <column icon="/icons/file.png" text="i18n.common.type" width="58"/>
-		            <column icon="/icons/task.png" text="i18n.common.occurrence" width="95"/>
+		            <column icon="/icons/task.png" text="i18n.plugins.reminders.occurrence" width="95"/>
 		            <column icon="/icons/date_start.png" text="i18n.common.start.date" width="142"/>
 		            <column icon="/icons/date_end.png" text="i18n.common.end.date" width="142"/>
 		            <column icon="/icons/email_receive.png" text="i18n.common.recipient" width="150"/>
