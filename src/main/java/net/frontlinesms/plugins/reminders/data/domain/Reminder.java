@@ -28,10 +28,12 @@ import javax.persistence.*;
 
 import net.frontlinesms.data.EntityField;
 
-/**
- * Object representing a reminder in our data structure.
- * 
+/*
+ * Reminder
  * @author Dale Zak
+ * 
+ * see {@link "http://www.frontlinesms.net"} for more details. 
+ * copyright owned by Kiwanja.net
  */
 @Entity
 public class Reminder {

@@ -22,12 +22,14 @@ package net.frontlinesms.plugins.reminders.data.repository;
 import java.util.Collection;
 import java.util.List;
 
-import net.frontlinesms.data.domain.Contact;
 import net.frontlinesms.plugins.reminders.data.domain.Reminder;
 
-/**
- * Data access object interface for {@link Reminder}
+/*
+ * ReminderDao
  * @author Dale Zak
+ * 
+ * see {@link "http://www.frontlinesms.net"} for more details. 
+ * copyright owned by Kiwanja.net
  */
 public interface ReminderDao {
 	/**
