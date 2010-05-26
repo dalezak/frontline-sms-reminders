@@ -22,8 +22,10 @@ package net.frontlinesms.plugins.reminders.data.repository.hibernate;
 import java.util.Collection;
 import java.util.List;
 
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.SimpleExpression;
 
 import net.frontlinesms.data.repository.hibernate.BaseHibernateDao;
 
@@ -49,6 +51,15 @@ public class HibernateReminderDao extends BaseHibernateDao<Reminder> implements 
 		return super.getAll();
 	}
 
+	/** @see ReminderDao#getPendingReminders() */
+	public Collection<Reminder> getPendingReminders() {
+		DetachedCriteria criteria = super.getCriterion();
+		Criterion notSent = Restrictions.ne(Field.STATUS.getFieldName(), Reminder.Status.SENT);
+		Criterion isNull = Restrictions.isNull(Field.STATUS.getFieldName());
+		criteria.add(Restrictions.or(notSent, isNull));
+		return super.getList(criteria);
+	}
+	
 	/** @see ReminderDao#getAllReminders(int,int) */
 	public List<Reminder> getAllReminders(int startIndex, int limit) {
 		return super.getAll(startIndex, limit);
@@ -80,5 +91,4 @@ public class HibernateReminderDao extends BaseHibernateDao<Reminder> implements 
 	public void deleteReminder(Reminder reminder) {
 		super.delete(reminder);
 	}
-
 }

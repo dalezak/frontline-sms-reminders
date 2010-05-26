@@ -42,6 +42,9 @@ public interface ReminderDao {
 	/** @return all reminders */
 	public Collection<Reminder> getAllReminders();
 	
+	/** @return all pending reminders */
+	public Collection<Reminder> getPendingReminders();
+	
 	/**
 	 * Returns all reminders from a particular start index, with a maximum number of returned reminders set.
 	 * @param startIndex index of the first reminder to fetch

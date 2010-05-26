@@ -206,6 +206,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 			int occurrence = this.ui.getSelectedIndex(comboOccurrence);
 			long startDate = getLongFromDateFields(textDateStart, comboHourStart, comboMinuteStart, comboAmPmStart);
 			long endDate = getLongFromDateFields(textDateEnd, comboHourEnd, comboMinuteEnd, comboAmPmEnd);
+			if (occurrence == 0) endDate = startDate;
 			String subject = (type == Reminder.Type.EMAIL) ? this.ui.getText(textSubject) : "";
 			String message = this.ui.getText(textMessage);
 			if (type == Type.EMAIL && this.emailAccountDao.getAllEmailAccounts().size() == 0) {
@@ -235,6 +236,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 					reminder.setStartDate(startDate);
 					reminder.setEndDate(endDate);
 					reminder.setType(type);
+					reminder.setStatus(Reminder.Status.PENDING);
 					reminder.setRecipients(recipients.toString());
 					reminder.setSubject(subject);
 					reminder.setContent(message);
@@ -255,6 +257,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 											subject, 
 											message, 
 											Reminder.getOccurrenceForIndex(occurrence));
+					reminder.setStatus(Reminder.Status.PENDING);
 					this.reminderDao.saveReminder(reminder);
 					if (type == Reminder.Type.EMAIL) {
 						this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_CREATED));

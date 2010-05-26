@@ -50,8 +50,8 @@ public class ReminderTimerTask extends TimerTask {
 	public void run() {
 		LOG.trace("ReminderTimerTask.run");
 		Calendar now = Calendar.getInstance();
-		//TODO only retrieve pending reminders
-		for (Reminder reminder : this.reminderDao.getAllReminders()) {
+		for (Reminder reminder : this.reminderDao.getPendingReminders()) {
+			LOG.trace(reminder);
 			Calendar date = Calendar.getInstance();
 			date.setTimeInMillis(reminder.getStartDate());
 			if (reminder.getStatus() != Reminder.Status.SENT) {
