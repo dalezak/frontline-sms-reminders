@@ -21,12 +21,19 @@ package net.frontlinesms.plugins.reminders.data.domain;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.persistence.*;
 
+import org.apache.log4j.Logger;
+
+import net.frontlinesms.Utils;
 import net.frontlinesms.data.EntityField;
+import net.frontlinesms.plugins.reminders.RemindersCallback;
 
 /*
  * Reminder
@@ -36,7 +43,13 @@ import net.frontlinesms.data.EntityField;
  * copyright owned by Kiwanja.net
  */
 @Entity
-public class Reminder {
+@Table(name="reminder")
+@DiscriminatorColumn(name="occurrence", discriminatorType=DiscriminatorType.STRING)
+@DiscriminatorValue(value="reminder")
+@Inheritance(strategy=InheritanceType.SINGLE_TABLE)
+public abstract class Reminder extends TimerTask {
+	
+	private static final Logger LOG = Utils.getLogger(Reminder.class);
 	
 	public static final String RECIPIENT_SEPARATOR = ";";
 	
@@ -87,34 +100,6 @@ public class Reminder {
 		/** @see EntityField#getFieldName() */
 		public String getFieldName() { return this.fieldName; }
 	}
-	
-//> CONSTANTS
-	public enum Type {
-		/** Email Reminder */
-		EMAIL,
-		/** Message Reminder */
-		MESSAGE
-	}
-	
-	public enum Status {
-		/** Pending */
-		PENDING,
-		/** Sent */
-		SENT
-	}
-	
-	public enum Occurrence {
-		/** Occuring Once */
-		ONCE,
-		/** Occuring Hourly */
-		HOURLY,
-		/** Occuring Daily */
-		DAILY,
-		/** Occuring Weekly */
-		WEEKLY,
-		/** Occuring Monthly */
-		MONTHLY
-	}
 
 //> INSTANCE PROPERTIES
 	/** Unique id for this entity. This is for hibernate usage. */
@@ -140,24 +125,20 @@ public class Reminder {
 	private String content;
 	
 	/** Start Date of the reminder */
-//	@Column(name=COLUMN_STARTDATE)
+	@Column(name=COLUMN_STARTDATE)
 	private long startdate;
 
 	/** End Date of the reminder */
-//	@Column(name=COLUMN_ENDDATE)
+	@Column(name=COLUMN_ENDDATE)
 	private long enddate;
 	
 	/** Recipient of the reminder */
 	@Column(name=COLUMN_RECIPIENTS)
 	private String recipients;
-	
-	/** Occurrence of the reminder */
-	@Column(name=COLUMN_OCCURRENCE)
-	private Occurrence occurrence;
 
 //> CONSTRUCTORS
 	/** Empty constructor required for hibernate. */
-	Reminder() {}
+	public Reminder() {}
 	
 	/**
 	 * Creates an reminder with the supplied properties.
@@ -166,14 +147,118 @@ public class Reminder {
 	 * @param subject The reminder subject
 	 * @param content The reminder content
 	 */
-	public Reminder(long startdate, long enddate, Type type, String recipients, String subject, String content, Occurrence occurrence) {
-		this.type = type;
+	protected Reminder(long startdate, long enddate, Type type, String recipients, String subject, String content) {
 		this.startdate = startdate;
 		this.enddate = enddate;
+		this.type = type;
 		this.recipients = recipients;
 		this.subject = subject;
 		this.content = content;
-		this.occurrence = occurrence;
+	}
+	
+	public enum Type {
+		/** Email Reminder */
+		EMAIL,
+		/** Message Reminder */
+		MESSAGE
+	}
+	
+	public enum Status {
+		/** Pending */
+		PENDING,
+		/** Sent */
+		SENT
+	}
+	
+//> ABSTRACT METHODS
+	/**
+	 * Gets the Occurrence of this Reminder.
+	 */
+	public abstract String getOccurrence();
+	
+	/**
+	 * Gets the Occurrence label of this Reminder.
+	 */
+	public abstract String getOccurrenceLabel();
+	
+	/**
+	 * Gets the Period of this Reminder.
+	 */
+	public abstract long getPeriod();
+	
+	/**
+	 * The TimerTask Run, each implementing class will override this function
+	 */
+	public abstract void run();
+	
+	/**
+	 * Schedule this Reminder.
+	 */
+	public void scheduleReminder() {
+		if (this.getStatus() == null || this.getStatus() == Status.PENDING) {
+			if (this.getPeriod() > 0) {
+				LOG.debug("Reminder Scheduled: " + this.toString());
+				ReminderTimer.scheduleAtFixedRate(this, new Date(this.getStartDate()), this.getPeriod());
+			}
+			else {
+				LOG.debug("Reminder Scheduled: " + this.toString());
+				ReminderTimer.schedule(this, new Date(this.getStartDate()));
+			}
+		}
+		else {
+			LOG.debug("Reminder Expired: " + this.toString());
+		}
+	}
+	
+	/**
+	 * Send this Reminder.
+	 */
+	public void sendReminder() {
+		if (remindersCallback != null) {
+			remindersCallback.sendReminder(this);
+		}
+	}
+	
+	/**
+	 * Refresh this Reminder.
+	 */
+	public void refreshReminder() {
+		if (remindersCallback != null) {
+			remindersCallback.refreshReminders(this);
+		}
+	}
+	/*
+	* Set the callback interface for sending and refreshing reminders
+	**/	
+	public static void setCallback(RemindersCallback callback) {
+		remindersCallback = callback;
+	}private static RemindersCallback remindersCallback;
+	
+	/*
+	 * Singleton Timer for all Reminders	
+	 */
+	private static final Timer ReminderTimer = new Timer();
+	
+	/*
+	 * Stop all scheduled reminders
+	 */
+	public static void stopAllReminders() {
+		LOG.debug("stopAllReminders");
+		if (ReminderTimer != null) {
+			ReminderTimer.cancel();
+			ReminderTimer.purge();
+		}
+	}
+	
+	/*
+	 * Reminder toString()
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		return String.format("[%s, %s, %s, %s, %s, [%s], %s, %s]", 
+							this.getOccurrence(), this.getType(), this.getStatus(), 
+							new Date(this.startdate), new Date(this.enddate), 
+							this.recipients, this.subject, this.content);
 	}
 	
 //> ACCESSOR METHODS
@@ -224,73 +309,6 @@ public class Reminder {
 	 */
 	public void setType(Type reminderType) {
 		this.type = reminderType;
-	}
-	
-	/**
-	 * sets the occurrence of this Reminder.  Should be one of the Reminder.OCCURRENCE_ constants.
-	 * @param occurrence new value for {@link #occurrence}
-	 */
-	public void setOccurrence(Occurrence occurrence) {
-		this.occurrence = occurrence;
-	}
-
-	/**
-	 * Gets the Occurrence of this Reminder.  Should be one of the Reminder.OCCURRENCE_ constants.
-	 * @return {@link #occurrence}
-	 */
-	public Occurrence getOccurrence() {
-		return this.occurrence;
-	}
-	
-	public String getOccurrenceLabel() {
-		if (this.getOccurrence() == Reminder.Occurrence.ONCE) {
-			//TODO change to property file
-			return "Once";
-		}
-		else if (this.getOccurrence() == Reminder.Occurrence.HOURLY) {
-			//TODO change to property file
-			return "Hourly";
-		}
-		else if (this.getOccurrence() == Reminder.Occurrence.DAILY) {
-			//TODO change to property file
-			return "Daily";
-		}
-		else if (this.getOccurrence() == Reminder.Occurrence.WEEKLY) {
-			//TODO change to property file
-			return "Weekly";
-		}
-		else if (this.getOccurrence() == Reminder.Occurrence.MONTHLY) {
-			//TODO change to property file
-			return "Monthly";
-		}
-		else {
-			//TODO change to property file
-			return "Once";
-		}
-	}
-	
-	public static Occurrence getOccurrenceForIndex(int index) {
-		switch(index) {
-			case 0 : return Occurrence.ONCE;
-			case 1 : return Occurrence.HOURLY;
-			case 2 : return Occurrence.DAILY;
-			case 3 : return Occurrence.WEEKLY;
-			case 4 : return Occurrence.MONTHLY;
-			default: return Occurrence.ONCE;
-		}
-	}
-	
-	public static int getIndexForOccurrence(Occurrence occurrence) {
-		if (occurrence == Occurrence.ONCE) return 0;
-		if (occurrence == Occurrence.HOURLY) return 1;
-		if (occurrence == Occurrence.DAILY) return 2;
-		if (occurrence == Occurrence.WEEKLY) return 3;
-		if (occurrence == Occurrence.MONTHLY) return 4;
-		return 0;
-	}
-	
-	public int getOccurrenceIndex() {
-		return Reminder.getIndexForOccurrence(this.occurrence);
 	}
 	
 	/**
@@ -393,7 +411,7 @@ public class Reminder {
 		if (startdate != other.startdate) return false;
 		if (enddate != other.enddate) return false;
 		if (type != other.type) return false;
-		if (occurrence != other.occurrence) return false;
+		if (!getOccurrence().equalsIgnoreCase(other.getOccurrence())) return false;
 		if (recipients == null) {
 			if (other.recipients != null)
 				return false;

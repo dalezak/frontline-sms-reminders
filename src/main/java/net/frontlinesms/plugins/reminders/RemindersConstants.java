@@ -35,6 +35,17 @@ public final class RemindersConstants {
 	public static final String DAILY = "plugins.reminders.daily";
 	public static final String WEEKLY = "plugins.reminders.weekly";
 	public static final String MONTHLY = "plugins.reminders.monthly";
+	
+	public static final String WEEKDAYS = "plugins.reminders.weekdays";
+	public static final String WEEKENDS = "plugins.reminders.weekends";
+	public static final String MONDAYS = "plugins.reminders.mondays";
+	public static final String TUESDAYS = "plugins.reminders.tuesdays";
+	public static final String WEDNESDAYS = "plugins.reminders.wednesdays";
+	public static final String THURSDAYS = "plugins.reminders.thursdays";
+	public static final String FRIDAYS = "plugins.reminders.fridays";
+	public static final String SATURDAYS = "plugins.reminders.saturdays";
+	public static final String SUNDAYS = "plugins.reminders.sundays";
+	
 	public static final String MISSING_START_DATE = "plugins.reminders.missing.start.date";
 	public static final String MISSING_END_DATE = "plugins.reminders.missing.end.date";
 	public static final String MISSING_DATE_RANGE = "plugins.reminders.missing.date.range";

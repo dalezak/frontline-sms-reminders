@@ -33,6 +33,7 @@ import net.frontlinesms.Utils;
 import net.frontlinesms.data.domain.Contact;
 import net.frontlinesms.data.repository.ContactDao;
 import net.frontlinesms.data.repository.EmailAccountDao;
+import net.frontlinesms.plugins.reminders.data.domain.OnceReminder;
 import net.frontlinesms.plugins.reminders.data.domain.Reminder;
 import net.frontlinesms.plugins.reminders.data.domain.Reminder.Type;
 import net.frontlinesms.plugins.reminders.data.repository.ReminderDao;
@@ -88,12 +89,12 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 	private ComponentPagingHandler contactListPager;
 	private Object contactListComponent;
 	private Reminder selectedReminder;
-	private RemindersTabHandler tabHandler;
+	private RemindersCallback remindersCallback;
 	
-	public RemindersDialogHandler(UiGeneratorController ui, ApplicationContext applicationContext, RemindersTabHandler tabHandler) {
+	public RemindersDialogHandler(UiGeneratorController ui, ApplicationContext applicationContext, RemindersCallback callback) {
 		this.ui = ui;
 		this.applicationContext = applicationContext;
-		this.tabHandler = tabHandler;
+		this.remindersCallback = callback;
 		this.reminderDao = (ReminderDao) this.applicationContext.getBean("reminderDao");
 		this.contactDao = this.ui.getFrontlineController().getContactDao();
 		this.emailAccountDao = this.ui.getFrontlineController().getEmailAccountFactory();
@@ -116,6 +117,10 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		this.contactListPager.refresh();
 		
 		Object comboOccurrence = this.ui.find(reminderDialog, DIALOG_COMBO_OCCURRENCE);
+		for (Reminder reminderClass : RemindersFactory.getReminderClasses()) {
+			Object comboBoxChoice = this.ui.createComboboxChoice(reminderClass.getOccurrenceLabel(), reminderClass.getOccurrence());
+			this.ui.add(comboOccurrence, comboBoxChoice);
+		}
 		
 		Object comboHourStart = this.ui.find(reminderDialog, DIALOG_COMBO_HOUR_START);
 		Object comboHourEnd = this.ui.find(reminderDialog, DIALOG_COMBO_HOUR_END);
@@ -143,7 +148,14 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		
 		if (reminder != null) {
 			this.ui.setAttachedObject(reminderDialog, reminder);
-			this.ui.setSelectedIndex(comboOccurrence, reminder.getOccurrenceIndex());
+			for (int index = 0; index < this.ui.getCount(comboOccurrence); index++) {
+				Object comboOccurrenceItem = this.ui.getItem(comboOccurrence, index);
+				String comboOccurrenceItemOccurrence = this.ui.getAttachedObject(comboOccurrenceItem).toString();
+				if (reminder.getOccurrence().equalsIgnoreCase(comboOccurrenceItemOccurrence)) {
+					this.ui.setSelectedIndex(comboOccurrence, index);
+					break;
+				}				
+			}
 			occurrenceChanged(reminderDialog, comboOccurrence);
 			
 			setDateFields(reminder.getStartCalendar(), textDateStart, comboHourStart, comboMinuteStart, comboAmPmStart);
@@ -167,7 +179,13 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 			Calendar now = Calendar.getInstance();
 			setDateFields(now, textDateStart, comboHourStart, comboMinuteStart, comboAmPmStart);
 			setDateFields(now, textDateEnd, comboHourEnd, comboMinuteEnd, comboAmPmEnd);
-			this.ui.setSelectedIndex(comboOccurrence, Reminder.getIndexForOccurrence(Reminder.Occurrence.ONCE));
+			for (int index = 0; index < this.ui.getCount(comboOccurrence); index++) {
+				Object comboOccurrenceItem = this.ui.getItem(comboOccurrence, index);
+				if (OnceReminder.isSatisfiedBy(this.ui.getAttachedObject(comboOccurrenceItem).toString())) {
+					this.ui.setSelectedIndex(comboOccurrence, index);
+					break;
+				}
+			}
 			this.ui.setText(reminderDialog, InternationalisationUtils.getI18NString(RemindersConstants.CREATE_REMINDER));
 			this.ui.setText(this.dialogComponent, InternationalisationUtils.getI18NString(RemindersConstants.CREATE_REMINDER));
 		}
@@ -203,10 +221,15 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 				}
 				recipients.append(contact.getName());
 			}
-			int occurrence = this.ui.getSelectedIndex(comboOccurrence);
+			Object occurrenceItem = this.ui.getSelectedItem(comboOccurrence);
+			String occurrence = this.ui.getAttachedObject(occurrenceItem).toString();
+			
 			long startDate = getLongFromDateFields(textDateStart, comboHourStart, comboMinuteStart, comboAmPmStart);
 			long endDate = getLongFromDateFields(textDateEnd, comboHourEnd, comboMinuteEnd, comboAmPmEnd);
-			if (occurrence == 0) endDate = startDate;
+			if (OnceReminder.isSatisfiedBy(occurrence)) {
+				endDate = startDate;
+			}
+			
 			String subject = (type == Reminder.Type.EMAIL) ? this.ui.getText(textSubject) : "";
 			String message = this.ui.getText(textMessage);
 			if (type == Type.EMAIL && this.emailAccountDao.getAllEmailAccounts().size() == 0) {
@@ -215,10 +238,10 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 			else if (startDate == 0) {
 				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_START_DATE));
 			}
-			else if (occurrence > 0 && endDate == 0) {
+			else if (OnceReminder.isSatisfiedBy(occurrence) == false && endDate == 0) {
 				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_END_DATE));
 			}
-			else if (occurrence > 0 && startDate > endDate) {
+			else if (OnceReminder.isSatisfiedBy(occurrence) == false && startDate > endDate) {
 				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_DATE_RANGE));
 			}
 			else if (recipients.length() == 0) {
@@ -232,7 +255,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 			}
 			else {
 				Reminder reminder = this.ui.getAttachedObject(dialog, Reminder.class);
-				if (reminder != null) {
+				if (reminder != null && reminder.getOccurrence().equalsIgnoreCase(occurrence)) {
 					reminder.setStartDate(startDate);
 					reminder.setEndDate(endDate);
 					reminder.setType(type);
@@ -240,23 +263,20 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 					reminder.setRecipients(recipients.toString());
 					reminder.setSubject(subject);
 					reminder.setContent(message);
-					reminder.setOccurrence(Reminder.getOccurrenceForIndex(occurrence));
 					this.reminderDao.updateReminder(reminder);
 					if (type == Reminder.Type.EMAIL) {
 						this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_UPDATED));
 					}
 					else {
 						this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.SMS_REMINDER_UPDATED));
-					}
+					}	
 				}
 				else {
-					reminder = new Reminder(startDate,
-											endDate,
-											type, 
-											recipients.toString(), 
-											subject, 
-											message, 
-											Reminder.getOccurrenceForIndex(occurrence));
+					if (reminder != null) {
+						LOG.debug("Deleting Existing Reminder: " + reminder);
+						this.reminderDao.deleteReminder(reminder);
+					}
+					reminder = RemindersFactory.createReminder(startDate, endDate, type, recipients.toString(), subject, message, occurrence);
 					reminder.setStatus(Reminder.Status.PENDING);
 					this.reminderDao.saveReminder(reminder);
 					if (type == Reminder.Type.EMAIL) {
@@ -266,14 +286,16 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 						this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.SMS_REMINDER_CREATED));
 					}
 				}
+				reminder.scheduleReminder();
 				this.ui.remove(dialog);
 			}
-		} catch (Exception ex) {
+		} 
+		catch (Exception ex) {
 			LOG.trace(ex);
 			this.ui.alert(ex.getMessage());
 		}
-		if (tabHandler != null) {
-			tabHandler.refreshReminders();
+		if (remindersCallback != null) {
+			remindersCallback.refreshReminders(null);
 		}
 	}
 	
@@ -342,11 +364,9 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 	
 	private Object getContactRow(Contact contact, Reminder reminder) {
 		Object row = ui.createTableRow(contact);
-
 		ui.add(row, ui.createTableCell(contact.getDisplayName()));
 		ui.add(row, ui.createTableCell(contact.getPhoneNumber()));
 		ui.add(row, ui.createTableCell(contact.getEmailAddress()));
-		
 		if (reminder != null) {
 			for (String contactName : reminder.getRecipientsArray()) {
 				if (contact.getName().equals(contactName)) {
@@ -354,7 +374,6 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 				}
 			}
 		}
-		
         return row;
 	}
 	

@@ -60,7 +60,7 @@ import net.frontlinesms.data.domain.EmailAccount;
  * see {@link "http://www.frontlinesms.net"} for more details. 
  * copyright owned by Kiwanja.net
  */
-public class RemindersThinletTabController extends BasePluginThinletTabController<RemindersPluginController> implements ThinletUiEventHandler, PagedComponentItemProvider, RemindersTabHandler {
+public class RemindersThinletTabController extends BasePluginThinletTabController<RemindersPluginController> implements ThinletUiEventHandler, PagedComponentItemProvider, RemindersCallback {
 
 	private static Logger LOG = Utils.getLogger(RemindersThinletTabController.class);
 	
@@ -126,7 +126,11 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		return super.getTabComponent();
 	}
 
-	public void refreshReminders() {
+	public void refreshReminders(Reminder reminder) {
+		LOG.debug("RemindersThinletTabController.refreshReminders: " + reminder);
+		if (reminder != null) {
+			this.reminderDao.updateReminder(reminder);
+		}
 		this.reminderListPager.refresh();
 	}
 	
@@ -219,23 +223,19 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	}
 	
 	public void sendReminder(Reminder reminder) {
-		LOG.trace("sendReminder");	
+		LOG.debug("sendReminder: " + reminder);	
 		if (reminder != null) {
 			if (reminder.getType() == Reminder.Type.EMAIL) {
 				Collection<EmailAccount> emailAccounts = this.emailAccountDao.getAllEmailAccounts();
 				if (emailAccounts.size() > 0) {
 					for (String contactName : reminder.getRecipientsArray()) {
-						LOG.trace("sending EMAIL");
+						LOG.trace("Sending EMAIL");
 						//TODO allow user to specific a specific email account
 						EmailAccount emailAccount = emailAccounts.iterator().next();
 						Contact contact = this.contactDao.getContactByName(contactName);
 						Email email = new Email(emailAccount, contact.getEmailAddress(), reminder.getSubject(), reminder.getContent());	
 						this.emailDao.saveEmail(email);
 						this.emailManager.sendEmail(email);
-					}
-					if (reminder.getOccurrence() == Reminder.Occurrence.ONCE ||
-						Calendar.getInstance().getTimeInMillis() >= reminder.getEndDate()) {
-						reminder.setStatus(Reminder.Status.SENT);
 					}
 					this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_SENT));
 				}
@@ -247,15 +247,20 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 				for (String contactName : reminder.getRecipientsArray()) {
 					Contact contact = this.contactDao.getContactByName(contactName);
 					if (contact != null) {
-						LOG.trace("sending MESSAGE");
+						LOG.trace("Sending MESSAGE");
 						this.frontlineController.sendTextMessage(contact.getPhoneNumber(), reminder.getContent());
 					}
 				}
-				if (reminder.getOccurrence() == Reminder.Occurrence.ONCE ||
-					Calendar.getInstance().getTimeInMillis() >= reminder.getEndDate()) {
-					reminder.setStatus(Reminder.Status.SENT);
-				}
 				this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.SMS_REMINDER_SENT));
+			}
+			Calendar now = Calendar.getInstance();
+			if (now.equals(reminder.getEndCalendar())) {
+				LOG.debug("now == end: " + reminder);
+				reminder.setStatus(Reminder.Status.SENT);
+			} 
+			else if (now.after(reminder.getEndCalendar())) {
+				LOG.debug("now > end: " + reminder);
+				reminder.setStatus(Reminder.Status.SENT);
 			}
 			this.reminderDao.updateReminder(reminder);
 		}

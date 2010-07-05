@@ -25,7 +25,6 @@ import java.util.List;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Restrictions;
-import org.hibernate.criterion.SimpleExpression;
 
 import net.frontlinesms.data.repository.hibernate.BaseHibernateDao;
 
@@ -48,7 +47,11 @@ public class HibernateReminderDao extends BaseHibernateDao<Reminder> implements 
 
 	/** @see ReminderDao#getAllReminders() */
 	public Collection<Reminder> getAllReminders() {
-		return super.getAll();
+		DetachedCriteria c = super.getCriterion(); 
+        // this ^^ is essentially the same as saying DetachedCriteria c= DetachedCriteria.forClass(Reminder.class) 
+        // it tells hibernate that you want all Reminders, including subclasses 
+        return super.getList(c);
+        //return super.getAll();
 	}
 
 	/** @see ReminderDao#getPendingReminders() */
