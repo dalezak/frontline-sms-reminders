@@ -227,6 +227,17 @@ public abstract class Reminder extends TimerTask {
 			remindersCallback.refreshReminders(this);
 		}
 	}
+	
+	/*
+	 * Stop this reminder
+	 */
+	public void stopReminder() {
+		this.cancel();
+		if (ReminderTimer != null) {
+			ReminderTimer.purge();
+		}
+	}
+	
 	/*
 	* Set the callback interface for sending and refreshing reminders
 	**/	
@@ -245,8 +256,8 @@ public abstract class Reminder extends TimerTask {
 	public static void stopAllReminders() {
 		LOG.debug("stopAllReminders");
 		if (ReminderTimer != null) {
-			ReminderTimer.cancel();
 			ReminderTimer.purge();
+			ReminderTimer.cancel();
 		}
 	}
 	

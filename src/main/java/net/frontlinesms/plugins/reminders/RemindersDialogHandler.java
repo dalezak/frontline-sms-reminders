@@ -274,6 +274,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 				else {
 					if (reminder != null) {
 						LOG.debug("Deleting Existing Reminder: " + reminder);
+						reminder.stopReminder();
 						this.reminderDao.deleteReminder(reminder);
 					}
 					reminder = RemindersFactory.createReminder(startDate, endDate, type, recipients.toString(), subject, message, occurrence);
