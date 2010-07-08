@@ -26,7 +26,7 @@ import javax.persistence.Entity;
 
 import org.apache.log4j.Logger;
 
-import net.frontlinesms.Utils;
+import net.frontlinesms.FrontlineUtils;
 import net.frontlinesms.plugins.reminders.RemindersConstants;
 import net.frontlinesms.ui.i18n.InternationalisationUtils;
 
@@ -41,7 +41,7 @@ import net.frontlinesms.ui.i18n.InternationalisationUtils;
 @DiscriminatorValue(value = "once")
 public class OnceReminder extends Reminder {
 	
-	private static final Logger LOG = Utils.getLogger(OnceReminder.class);
+	private static final Logger LOG = FrontlineUtils.getLogger(OnceReminder.class);
 	
 	public OnceReminder() {}
 	
@@ -77,7 +77,7 @@ public class OnceReminder extends Reminder {
 			 now.get(Calendar.DAY_OF_MONTH) == start.get(Calendar.DAY_OF_MONTH) &&
 			 now.get(Calendar.YEAR) == start.get(Calendar.YEAR)) {
 			this.sendReminder();
-			this.cancel();
+			this.stopReminder();
 		}
 	}
 }

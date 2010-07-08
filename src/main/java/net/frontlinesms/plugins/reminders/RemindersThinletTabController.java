@@ -22,12 +22,17 @@ package net.frontlinesms.plugins.reminders;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.text.DateFormat;
 
 import net.frontlinesms.EmailServerHandler;
 import net.frontlinesms.FrontlineSMS;
-import net.frontlinesms.Utils;
+import net.frontlinesms.FrontlineUtils;
 import net.frontlinesms.data.repository.ContactDao;
 import net.frontlinesms.data.repository.EmailAccountDao;
 import net.frontlinesms.data.repository.EmailDao;
@@ -47,6 +52,7 @@ import thinlet.Thinlet;
 import thinlet.ThinletText;
 
 import net.frontlinesms.plugins.reminders.data.domain.Reminder;
+import net.frontlinesms.plugins.reminders.data.domain.Reminder.Status;
 import net.frontlinesms.plugins.reminders.data.repository.ReminderDao;
 
 import net.frontlinesms.data.domain.Contact;
@@ -62,7 +68,7 @@ import net.frontlinesms.data.domain.EmailAccount;
  */
 public class RemindersThinletTabController extends BasePluginThinletTabController<RemindersPluginController> implements ThinletUiEventHandler, PagedComponentItemProvider, RemindersCallback {
 
-	private static Logger LOG = Utils.getLogger(RemindersThinletTabController.class);
+	private static Logger LOG = FrontlineUtils.getLogger(RemindersThinletTabController.class);
 	
 	private FrontlineSMS frontlineController;
 	private ApplicationContext applicationContext;
@@ -118,20 +124,141 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		this.reminderListPager.refresh();
 	}
 	
+	/**
+	 * The ScheduledExecutorService provider used for scheduling tasks
+	 */
+	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+	
+	/**
+	 * Hashmap to store Reminder to ScheduledFuture to allow cancelling of scheduled tasks
+	 */
+	private final HashMap<Reminder,ScheduledFuture<?>> futures = new HashMap<Reminder,ScheduledFuture<?>>();
+	
+	/**
+	 * Schedule a Reminder
+	 */
+	public void scheduleReminder(Reminder reminder) {
+		LOG.debug("Callback.scheduleReminder: " + reminder);
+		if (reminder != null && reminder.getStatus() != Status.SENT) {
+			Calendar start = (Calendar)reminder.getStartCalendar().clone();
+			Calendar now = Calendar.getInstance();
+			if (reminder.getPeriod() > 0) {
+				while (start.before(now)) {
+					start.add(Calendar.MILLISECOND, (int)reminder.getPeriod());
+				}
+				LOG.debug("Reminder Scheduled: " + reminder);
+				long initialDelay = start.getTimeInMillis() - now.getTimeInMillis();
+				ScheduledFuture<?> future = this.scheduler.scheduleAtFixedRate(reminder, initialDelay, reminder.getPeriod(), TimeUnit.MILLISECONDS);
+				this.futures.put(reminder, future);
+			}
+			else {
+				LOG.debug("Reminder Scheduled: " + reminder);
+				long initialDelay = start.getTimeInMillis() - now.getTimeInMillis();
+				ScheduledFuture<?> future = this.scheduler.schedule(reminder, initialDelay, TimeUnit.MILLISECONDS);
+				this.futures.put(reminder, future);
+			}
+		}
+	}
+	
+	/**
+	 * Stop a Reminder
+	 */
+	public void stopReminder(Reminder reminder) {
+		LOG.debug("Callback.stopReminder: " + reminder);
+		if (reminder != null && this.futures.containsKey(reminder)) {
+			ScheduledFuture<?> future = futures.get(reminder);
+			if (future != null) {
+				boolean result = future.cancel(true);
+				LOG.debug("Cancel: " + result);	
+			}	
+		}
+	}
+	
+	/**
+	 * Refresh Reminders
+	 */
+	public void refreshReminders(Reminder reminder) {
+		LOG.debug("Callback.refreshReminders: " + reminder);
+		if (reminder != null) {
+			this.reminderDao.updateReminder(reminder);
+		}
+		this.reminderListPager.refresh();
+	}
+	
+	/**
+	 * Send a collection of Reminders
+	 * @param list
+	 */
+	public void sendReminder(Object list) {
+		for (Object selected : this.ui.getSelectedItems(list)) {
+			sendReminder((Reminder)this.ui.getAttachedObject(selected, Reminder.class));
+		}
+	}
+	
+	/**
+	 * Send a Reminder
+	 */
+	public void sendReminder(Reminder reminder) {
+		LOG.debug("sendReminder: " + reminder);	
+		if (reminder != null) {
+			if (reminder.getType() == Reminder.Type.EMAIL) {
+				Collection<EmailAccount> emailAccounts = this.emailAccountDao.getAllEmailAccounts();
+				if (emailAccounts.size() > 0) {
+					for (String contactName : reminder.getRecipientsArray()) {
+						LOG.trace("Sending EMAIL");
+						//TODO allow user to specific a specific email account
+						EmailAccount emailAccount = emailAccounts.iterator().next();
+						Contact contact = this.contactDao.getContactByName(contactName);
+						Email email = new Email(emailAccount, contact.getEmailAddress(), reminder.getSubject(), reminder.getContent());	
+						this.emailDao.saveEmail(email);
+						this.emailManager.sendEmail(email);
+					}
+					this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_SENT));
+				}
+				else {
+					this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_EMAIL_ACCOUNT));
+				}
+			}
+			else if (reminder.getType() == Reminder.Type.MESSAGE) {
+				for (String contactName : reminder.getRecipientsArray()) {
+					Contact contact = this.contactDao.getContactByName(contactName);
+					if (contact != null) {
+						LOG.trace("Sending MESSAGE");
+						this.frontlineController.sendTextMessage(contact.getPhoneNumber(), reminder.getContent());
+					}
+				}
+				this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.SMS_REMINDER_SENT));
+			}
+			Calendar now = Calendar.getInstance();
+			if (now.equals(reminder.getEndCalendar())) {
+				LOG.debug("now == end: " + reminder);
+				reminder.setStatus(Reminder.Status.SENT);
+			} 
+			else if (now.after(reminder.getEndCalendar())) {
+				LOG.debug("now > end: " + reminder);
+				reminder.setStatus(Reminder.Status.SENT);
+			}
+			this.reminderDao.updateReminder(reminder);
+		}
+		this.reminderListPager.refresh();
+	}
+	
+	/**
+	 * Cancel all Reminders
+	 */
+	public void cancelAllReminders() {
+		LOG.debug("Callback.cancelAllReminders");
+		if (this.scheduler != null) {
+			this.scheduler.shutdownNow();
+		}
+	}
+	
 	public void setFrontline(FrontlineSMS frontlineController) {
 		this.frontlineController = frontlineController;
 	}
 	
 	public Object getTab(){
 		return super.getTabComponent();
-	}
-
-	public void refreshReminders(Reminder reminder) {
-		LOG.debug("RemindersThinletTabController.refreshReminders: " + reminder);
-		if (reminder != null) {
-			this.reminderDao.updateReminder(reminder);
-		}
-		this.reminderListPager.refresh();
 	}
 	
 	public void removeSelectedFromReminderList() {
@@ -214,57 +341,6 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		else {
 			this.dialogHandler.init(null);
 		}
-	}
-	
-	public void sendReminder(Object list) {
-		for (Object selected : this.ui.getSelectedItems(list)) {
-			sendReminder((Reminder)this.ui.getAttachedObject(selected, Reminder.class));
-		}
-	}
-	
-	public void sendReminder(Reminder reminder) {
-		LOG.debug("sendReminder: " + reminder);	
-		if (reminder != null) {
-			if (reminder.getType() == Reminder.Type.EMAIL) {
-				Collection<EmailAccount> emailAccounts = this.emailAccountDao.getAllEmailAccounts();
-				if (emailAccounts.size() > 0) {
-					for (String contactName : reminder.getRecipientsArray()) {
-						LOG.trace("Sending EMAIL");
-						//TODO allow user to specific a specific email account
-						EmailAccount emailAccount = emailAccounts.iterator().next();
-						Contact contact = this.contactDao.getContactByName(contactName);
-						Email email = new Email(emailAccount, contact.getEmailAddress(), reminder.getSubject(), reminder.getContent());	
-						this.emailDao.saveEmail(email);
-						this.emailManager.sendEmail(email);
-					}
-					this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_SENT));
-				}
-				else {
-					this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_EMAIL_ACCOUNT));
-				}
-			}
-			else if (reminder.getType() == Reminder.Type.MESSAGE) {
-				for (String contactName : reminder.getRecipientsArray()) {
-					Contact contact = this.contactDao.getContactByName(contactName);
-					if (contact != null) {
-						LOG.trace("Sending MESSAGE");
-						this.frontlineController.sendTextMessage(contact.getPhoneNumber(), reminder.getContent());
-					}
-				}
-				this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.SMS_REMINDER_SENT));
-			}
-			Calendar now = Calendar.getInstance();
-			if (now.equals(reminder.getEndCalendar())) {
-				LOG.debug("now == end: " + reminder);
-				reminder.setStatus(Reminder.Status.SENT);
-			} 
-			else if (now.after(reminder.getEndCalendar())) {
-				LOG.debug("now > end: " + reminder);
-				reminder.setStatus(Reminder.Status.SENT);
-			}
-			this.reminderDao.updateReminder(reminder);
-		}
-		this.reminderListPager.refresh();
 	}
 	
 	public PagedListDetails getListDetails(Object list, int startIndex, int limit) {

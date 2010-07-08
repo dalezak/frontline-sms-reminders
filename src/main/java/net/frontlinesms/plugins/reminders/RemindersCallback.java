@@ -29,8 +29,8 @@ import net.frontlinesms.plugins.reminders.data.domain.Reminder;
  * copyright owned by Kiwanja.net
  */
 public interface RemindersCallback {
-	
-	public void refreshReminders(Reminder reminder);
 	public void sendReminder(Reminder reminder);
-	
+	public void stopReminder(Reminder reminder);
+	public void scheduleReminder(Reminder reminder);
+	public void refreshReminders(Reminder reminder);
 }

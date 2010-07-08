@@ -26,7 +26,7 @@ import javax.persistence.DiscriminatorValue;
 
 import org.apache.log4j.Logger;
 
-import net.frontlinesms.Utils;
+import net.frontlinesms.FrontlineUtils;
 import net.frontlinesms.plugins.reminders.RemindersConstants;
 import net.frontlinesms.ui.i18n.InternationalisationUtils;
 
@@ -41,7 +41,7 @@ import net.frontlinesms.ui.i18n.InternationalisationUtils;
 @DiscriminatorValue(value = "sundays")
 public class SundaysReminder extends Reminder {
 	
-	private static final Logger LOG = Utils.getLogger(SundaysReminder.class);
+	private static final Logger LOG = FrontlineUtils.getLogger(SundaysReminder.class);
 	
 	public SundaysReminder() {}
 	
@@ -74,7 +74,7 @@ public class SundaysReminder extends Reminder {
 		Calendar end = this.getEndCalendar();
 		if (now.after(end)) {
 			this.setStatus(Status.SENT);
-			this.cancel();
+			this.stopReminder();
 			this.refreshReminder();
 		}
 		else if ((now.equals(start) || now.after(start)) &&

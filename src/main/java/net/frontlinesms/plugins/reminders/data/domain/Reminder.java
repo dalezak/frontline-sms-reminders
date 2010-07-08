@@ -24,14 +24,22 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
-import java.util.Timer;
-import java.util.TimerTask;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.DiscriminatorColumn;
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.DiscriminatorType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.InheritanceType;
+import javax.persistence.Entity;
+import javax.persistence.Inheritance;
+import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
 
-import net.frontlinesms.Utils;
+import net.frontlinesms.FrontlineUtils;
 import net.frontlinesms.data.EntityField;
 import net.frontlinesms.plugins.reminders.RemindersCallback;
 
@@ -47,9 +55,9 @@ import net.frontlinesms.plugins.reminders.RemindersCallback;
 @DiscriminatorColumn(name="occurrence", discriminatorType=DiscriminatorType.STRING)
 @DiscriminatorValue(value="reminder")
 @Inheritance(strategy=InheritanceType.SINGLE_TABLE)
-public abstract class Reminder extends TimerTask {
+public abstract class Reminder implements Runnable {
 	
-	private static final Logger LOG = Utils.getLogger(Reminder.class);
+	private static final Logger LOG = FrontlineUtils.getLogger(Reminder.class);
 	
 	public static final String RECIPIENT_SEPARATOR = ";";
 	
@@ -187,7 +195,7 @@ public abstract class Reminder extends TimerTask {
 	public abstract long getPeriod();
 	
 	/**
-	 * The TimerTask Run, each implementing class will override this function
+	 * Each subclass will provide their own implementation
 	 */
 	public abstract void run();
 	
@@ -195,18 +203,9 @@ public abstract class Reminder extends TimerTask {
 	 * Schedule this Reminder.
 	 */
 	public void scheduleReminder() {
-		if (this.getStatus() == null || this.getStatus() == Status.PENDING) {
-			if (this.getPeriod() > 0) {
-				LOG.debug("Reminder Scheduled: " + this.toString());
-				ReminderTimer.scheduleAtFixedRate(this, new Date(this.getStartDate()), this.getPeriod());
-			}
-			else {
-				LOG.debug("Reminder Scheduled: " + this.toString());
-				ReminderTimer.schedule(this, new Date(this.getStartDate()));
-			}
-		}
-		else {
-			LOG.debug("Reminder Expired: " + this.toString());
+		LOG.debug("Reminder.scheduleReminder: " + this);
+		if (remindersCallback != null) {
+			remindersCallback.scheduleReminder(this);
 		}
 	}
 	
@@ -214,6 +213,7 @@ public abstract class Reminder extends TimerTask {
 	 * Send this Reminder.
 	 */
 	public void sendReminder() {
+		LOG.debug("Reminder.sendReminder: " + this);
 		if (remindersCallback != null) {
 			remindersCallback.sendReminder(this);
 		}
@@ -223,18 +223,19 @@ public abstract class Reminder extends TimerTask {
 	 * Refresh this Reminder.
 	 */
 	public void refreshReminder() {
+		LOG.debug("Reminder.refreshReminder: " + this);
 		if (remindersCallback != null) {
 			remindersCallback.refreshReminders(this);
 		}
 	}
 	
-	/*
-	 * Stop this reminder
+	/**
+	 * Stop this Reminder.
 	 */
 	public void stopReminder() {
-		this.cancel();
-		if (ReminderTimer != null) {
-			ReminderTimer.purge();
+		LOG.debug("Reminder.stopReminder: " + this);
+		if (remindersCallback != null) {
+			remindersCallback.stopReminder(this);
 		}
 	}
 	
@@ -244,22 +245,6 @@ public abstract class Reminder extends TimerTask {
 	public static void setCallback(RemindersCallback callback) {
 		remindersCallback = callback;
 	}private static RemindersCallback remindersCallback;
-	
-	/*
-	 * Singleton Timer for all Reminders	
-	 */
-	private static final Timer ReminderTimer = new Timer();
-	
-	/*
-	 * Stop all scheduled reminders
-	 */
-	public static void stopAllReminders() {
-		LOG.debug("stopAllReminders");
-		if (ReminderTimer != null) {
-			ReminderTimer.purge();
-			ReminderTimer.cancel();
-		}
-	}
 	
 	/*
 	 * Reminder toString()

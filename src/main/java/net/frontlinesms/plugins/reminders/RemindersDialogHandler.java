@@ -29,7 +29,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 
-import net.frontlinesms.Utils;
+import net.frontlinesms.FrontlineUtils;
 import net.frontlinesms.data.domain.Contact;
 import net.frontlinesms.data.repository.ContactDao;
 import net.frontlinesms.data.repository.EmailAccountDao;
@@ -53,7 +53,7 @@ import net.frontlinesms.ui.i18n.InternationalisationUtils;
  */
 public class RemindersDialogHandler implements ThinletUiEventHandler, PagedComponentItemProvider {
 	
-	private static Logger LOG = Utils.getLogger(RemindersDialogHandler.class);
+	private static Logger LOG = FrontlineUtils.getLogger(RemindersDialogHandler.class);
 	
 	private static final String DIALOG_XML = "/ui/plugins/reminders/remindersForm.xml";
 	
@@ -70,6 +70,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 	private static final String DIALOG_COMBO_HOUR_START = "comboHourStart";
 	private static final String DIALOG_COMBO_MINUTE_START = "comboMinuteStart";
 	private static final String DIALOG_COMBO_AM_PM_START = "comboAmPmStart";
+
 	private static final String DIALOG_DATE_START = "textDateStart";
 	
 	private static final String DIALOG_COMBO_HOUR_END = "comboHourEnd";
@@ -138,9 +139,9 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		
 		Object comboAmPmStart = this.ui.find(reminderDialog, DIALOG_COMBO_AM_PM_START);
 		Object comboAmPmEnd = this.ui.find(reminderDialog, DIALOG_COMBO_AM_PM_END);
-		for (String amPM : new String[] {"AM", "PM"}) {
-			this.ui.add(comboAmPmStart, this.ui.createComboboxChoice(amPM, 0));
-			this.ui.add(comboAmPmEnd, this.ui.createComboboxChoice(amPM, 0));
+		for (String amPm : new String [] {"AM", "PM"}) {
+			this.ui.add(comboAmPmStart, this.ui.createComboboxChoice(amPm, amPm));
+			this.ui.add(comboAmPmEnd, this.ui.createComboboxChoice(amPm, amPm));
 		}
 		
 		Object textDateStart = this.ui.find(reminderDialog, DIALOG_DATE_START);
@@ -255,14 +256,17 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 			}
 			else {
 				Reminder reminder = this.ui.getAttachedObject(dialog, Reminder.class);
-				if (reminder != null && reminder.getOccurrence().equalsIgnoreCase(occurrence)) {
+				if (reminder != null) {
+					reminder.stopReminder();
+				}
+				if (reminder != null) {
 					reminder.setStartDate(startDate);
 					reminder.setEndDate(endDate);
 					reminder.setType(type);
-					reminder.setStatus(Reminder.Status.PENDING);
 					reminder.setRecipients(recipients.toString());
 					reminder.setSubject(subject);
 					reminder.setContent(message);
+					reminder.setStatus(Reminder.Status.PENDING);
 					this.reminderDao.updateReminder(reminder);
 					if (type == Reminder.Type.EMAIL) {
 						this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_UPDATED));
@@ -272,11 +276,6 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 					}	
 				}
 				else {
-					if (reminder != null) {
-						LOG.debug("Deleting Existing Reminder: " + reminder);
-						reminder.stopReminder();
-						this.reminderDao.deleteReminder(reminder);
-					}
 					reminder = RemindersFactory.createReminder(startDate, endDate, type, recipients.toString(), subject, message, occurrence);
 					reminder.setStatus(Reminder.Status.PENDING);
 					this.reminderDao.saveReminder(reminder);
@@ -380,11 +379,20 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 	
 	private void setDateFields(Calendar calendar, Object textDate, Object comboHour, Object comboMinute, Object comboAmPm) {
 		this.ui.setText(textDate, getDateStringFromCalendar(calendar));
-		if (calendar.get(Calendar.HOUR_OF_DAY) <= 12) {
+		if (calendar.get(Calendar.HOUR_OF_DAY) == 0) {
+			this.ui.setSelectedIndex(comboHour, 11);
+		}
+		else if (calendar.get(Calendar.HOUR_OF_DAY) == 12) {
+			this.ui.setSelectedIndex(comboHour, 11);
+		}
+		else if (calendar.get(Calendar.HOUR_OF_DAY) < 12) {
 			this.ui.setSelectedIndex(comboHour, calendar.get(Calendar.HOUR_OF_DAY) - 1);
 		}
-		else {
+		else if (calendar.get(Calendar.HOUR_OF_DAY) > 12) {
 			this.ui.setSelectedIndex(comboHour, calendar.get(Calendar.HOUR_OF_DAY) - 13);
+		}
+		else {
+			this.ui.setSelectedIndex(comboHour, 0);
 		}
 		this.ui.setSelectedIndex(comboMinute, calendar.get(Calendar.MINUTE));
 		this.ui.setSelectedIndex(comboAmPm, calendar.get(Calendar.AM_PM));
@@ -394,17 +402,22 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		try {
 			String date = this.ui.getText(textDate);
 			int hour = this.ui.getSelectedIndex(comboHour) + 1;
-			int minute = this.ui.getSelectedIndex(comboMinute);
-			int amPm = this.ui.getSelectedIndex(comboAmPm);
+			int minute = this.ui.getSelectedIndex(comboMinute); 
+			boolean isAM = this.ui.getSelectedIndex(comboAmPm) == 0;
 			DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
-			Date dateTime;
-			dateTime = dateFormat.parse(date);
+			Date dateTime = dateFormat.parse(date);
 			Calendar calendar = Calendar.getInstance();
 			calendar.setTime(dateTime);
-			if (amPm == 0) {
+			if (isAM && hour == 12) {
+				calendar.set(Calendar.HOUR_OF_DAY, 0);
+			}
+			else if (isAM && hour < 12) {
 				calendar.set(Calendar.HOUR_OF_DAY, hour);
 			}
-			else {
+			else if (!isAM && hour == 12) { 
+				calendar.set(Calendar.HOUR_OF_DAY, 12);
+			}
+			else if (!isAM) {
 				calendar.set(Calendar.HOUR_OF_DAY, hour + 12);
 			}
 			calendar.set(Calendar.MINUTE, minute);

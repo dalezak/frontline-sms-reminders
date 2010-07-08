@@ -20,7 +20,7 @@
 package net.frontlinesms.plugins.reminders;
 
 import net.frontlinesms.FrontlineSMS;
-import net.frontlinesms.Utils;
+import net.frontlinesms.FrontlineUtils;
 import net.frontlinesms.plugins.BasePluginController;
 import net.frontlinesms.plugins.PluginControllerProperties;
 import net.frontlinesms.plugins.PluginInitialisationException;
@@ -42,7 +42,7 @@ import org.springframework.context.ApplicationContext;
 @PluginControllerProperties(name = "Reminders Plugin", iconPath = "/icons/big_reminders.png", springConfigLocation = "classpath:net/frontlinesms/plugins/reminders/reminders-spring-hibernate.xml", hibernateConfigPath = "classpath:net/frontlinesms/plugins/reminders/reminders.hibernate.cfg.xml")
 public class RemindersPluginController extends BasePluginController {
 
-	private static Logger LOG = Utils.getLogger(RemindersPluginController.class);
+	private static Logger LOG = FrontlineUtils.getLogger(RemindersPluginController.class);
 	
 	private ApplicationContext applicationContext;
 	private FrontlineSMS frontlineController;
@@ -59,7 +59,7 @@ public class RemindersPluginController extends BasePluginController {
 
 	public void deinit() {
 		LOG.debug("deinit");
-		Reminder.stopAllReminders();
+		this.tabController.cancelAllReminders();
 	}
 
 	public void init(FrontlineSMS frontlineController, ApplicationContext applicationContext) throws PluginInitialisationException {

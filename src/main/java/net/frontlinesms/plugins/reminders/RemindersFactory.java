@@ -25,7 +25,7 @@ import java.util.ServiceLoader;
 
 import org.apache.log4j.Logger;
 
-import net.frontlinesms.Utils;
+import net.frontlinesms.FrontlineUtils;
 import net.frontlinesms.plugins.reminders.data.domain.Reminder;
 import net.frontlinesms.plugins.reminders.data.domain.Reminder.Type;
 
@@ -38,7 +38,7 @@ import net.frontlinesms.plugins.reminders.data.domain.Reminder.Type;
  */
 public final class RemindersFactory {
 
-	private static Logger LOG = Utils.getLogger(RemindersFactory.class);
+	private static Logger LOG = FrontlineUtils.getLogger(RemindersFactory.class);
 	
 	/*
 	 * Get list of Reminder class implementations

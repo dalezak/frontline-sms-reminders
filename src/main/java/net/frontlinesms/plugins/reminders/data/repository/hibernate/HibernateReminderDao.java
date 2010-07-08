@@ -48,11 +48,8 @@ public class HibernateReminderDao extends BaseHibernateDao<Reminder> implements 
 	/** @see ReminderDao#getAllReminders() */
 	public Collection<Reminder> getAllReminders() {
 		DetachedCriteria c = super.getCriterion(); 
-        // this ^^ is essentially the same as saying DetachedCriteria c= DetachedCriteria.forClass(Reminder.class) 
-        // it tells hibernate that you want all Reminders, including subclasses 
         return super.getList(c);
-        //return super.getAll();
-	}
+    }
 
 	/** @see ReminderDao#getPendingReminders() */
 	public Collection<Reminder> getPendingReminders() {
@@ -92,6 +89,9 @@ public class HibernateReminderDao extends BaseHibernateDao<Reminder> implements 
 	
 	/** @see ReminderDao#deleteReminder(Reminder) */
 	public void deleteReminder(Reminder reminder) {
+		if (reminder != null) {
+			reminder.stopReminder();
+		}
 		super.delete(reminder);
 	}
 }
