@@ -1,7 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <tab icon="/icons/big_reminders.png" text="i18n.plugins.reminders.reminders" name=":reminders">
     <panel name="panelReminders" bottom="9" columns="2" gap="9" left="9" right="9" top="9">
 		<label name="labelHeading" valign="top" icon="/icons/header/reminders.png" rowspan="3"/>
 		<panel name="panelTableReminders" border="false" rowspan="2" weightx="1" weighty="1" columns="1" gap="10">
+			<panel gap="10">
+				<label text="i18n.common.email.account" icon="/icons/email.png" />
+	    		<combobox name="comboEmailAccount" action="emailAccountChanged(this)" editable="false" weightx="1"/>
+	    	</panel>
 			<table name="tableReminders" selection="multiple" weightx="1" weighty="1" action="enableOptions(this, menuReminders, toolbarReminders)" perform="showReminderDialog(tableReminders)">
 		        <header>
 		            <column icon="/icons/status.png" text="i18n.common.status" width="65"/>

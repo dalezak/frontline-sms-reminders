@@ -29,7 +29,6 @@ import net.frontlinesms.plugins.reminders.data.repository.ReminderDao;
 import net.frontlinesms.ui.UiGeneratorController;
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.BasicConfigurator;
 import org.springframework.context.ApplicationContext;
 
 /*

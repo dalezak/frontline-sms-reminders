@@ -3,6 +3,8 @@
 	<name>frontlinesms-plugin-reminders</name>
 	<comment></comment>
 	<projects>
+		<project>Frontline</project>
+		<project>FrontlineSMS-distribution</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
