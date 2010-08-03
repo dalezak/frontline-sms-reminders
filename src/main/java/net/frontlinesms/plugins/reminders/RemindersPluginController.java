@@ -38,7 +38,7 @@ import org.springframework.context.ApplicationContext;
  * see {@link "http://www.frontlinesms.net"} for more details. 
  * copyright owned by Kiwanja.net
  */
-@PluginControllerProperties(name = "Reminders Plugin (beta)", iconPath = "/icons/big_reminders.png", springConfigLocation = "classpath:net/frontlinesms/plugins/reminders/reminders-spring-hibernate.xml", hibernateConfigPath = "classpath:net/frontlinesms/plugins/reminders/reminders.hibernate.cfg.xml")
+@PluginControllerProperties(name = "Reminders Plugin (Beta)", iconPath = "/icons/date_start.png", springConfigLocation = "classpath:net/frontlinesms/plugins/reminders/reminders-spring-hibernate.xml", hibernateConfigPath = "classpath:net/frontlinesms/plugins/reminders/reminders.hibernate.cfg.xml")
 public class RemindersPluginController extends BasePluginController {
 
 	private static Logger LOG = FrontlineUtils.getLogger(RemindersPluginController.class);
