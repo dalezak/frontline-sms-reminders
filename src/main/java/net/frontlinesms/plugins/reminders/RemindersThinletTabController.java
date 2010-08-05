@@ -289,7 +289,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		int index = 0;
 		String selectedEmailAccount = RemindersPluginProperties.getEmailAccount();
 		this.ui.removeAll(this.comboEmailAccount);
-		for (EmailAccount emailAccount : this.emailAccountDao.getAllEmailAccounts()) {
+		for (EmailAccount emailAccount : this.emailAccountDao.getSendingEmailAccounts()) {
 			String comboBoxText = String.format("%s : %s : %s : %s", emailAccount.getAccountName(), emailAccount.getAccountServer(), emailAccount.getProtocol(), emailAccount.getAccountServerPort());
 			Object comboBoxItem = this.ui.createComboboxChoice(comboBoxText, emailAccount);
 			this.ui.add(this.comboEmailAccount, comboBoxItem);
