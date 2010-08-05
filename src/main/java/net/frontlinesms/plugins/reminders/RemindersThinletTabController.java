@@ -58,6 +58,7 @@ import net.frontlinesms.plugins.reminders.data.repository.ReminderDao;
 import net.frontlinesms.data.domain.Contact;
 import net.frontlinesms.data.domain.Email;
 import net.frontlinesms.data.domain.EmailAccount;
+import net.frontlinesms.data.events.DatabaseEntityNotification;
 import net.frontlinesms.events.EventObserver;
 import net.frontlinesms.events.FrontlineEventNotification;
 
@@ -139,6 +140,11 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	public void notify(FrontlineEventNotification notification) {
 		if (notification instanceof TabChangedNotification) {
 			loadEmailAccounts();
+		} else if (notification instanceof DatabaseEntityNotification<?>) {
+			Object entity = ((DatabaseEntityNotification<?>) notification).getDatabaseEntity();
+			if (entity instanceof EmailAccount && !((EmailAccount) entity).isForReceiving()) {
+				loadEmailAccounts();
+			}
 		}
 	}
 	
