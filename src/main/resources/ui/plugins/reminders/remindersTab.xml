@@ -10,7 +10,7 @@
 			<table name="tableReminders" selection="multiple" weightx="1" weighty="1" action="enableOptions(this, menuReminders, toolbarReminders)" perform="showReminderDialog(tableReminders)">
 		        <header>
 		            <column icon="/icons/status.png" text="i18n.common.status" width="65"/>
-		            <column icon="/icons/file.png" text="i18n.common.type" width="58"/>
+		            <column icon="/icons/reminder_type.png" text="i18n.common.type" width="58"/>
 		            <column icon="/icons/task.png" text="i18n.plugins.reminders.occurrence" width="95"/>
 		            <column icon="/icons/date_start.png" text="i18n.common.start.date" width="142"/>
 		            <column icon="/icons/date_end.png" text="i18n.common.end.date" width="142"/>

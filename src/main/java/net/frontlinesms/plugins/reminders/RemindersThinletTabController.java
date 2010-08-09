@@ -51,6 +51,7 @@ import org.springframework.context.ApplicationContext;
 import thinlet.Thinlet;
 import thinlet.ThinletText;
 
+import net.frontlinesms.plugins.reminders.data.domain.ExpiredReminder;
 import net.frontlinesms.plugins.reminders.data.domain.Reminder;
 import net.frontlinesms.plugins.reminders.data.domain.Reminder.Status;
 import net.frontlinesms.plugins.reminders.data.repository.ReminderDao;
@@ -73,33 +74,60 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 
 	private static Logger LOG = FrontlineUtils.getLogger(RemindersThinletTabController.class);
 	
-	private FrontlineSMS frontlineController;
-	private ApplicationContext applicationContext;
-	
-	private final ReminderDao reminderDao;
-	private final ContactDao contactDao;
-	private final EmailDao emailDao;
-	private final EmailAccountDao emailAccountDao;
-	private final EmailServerHandler emailManager;
-	
-	private ComponentPagingHandler reminderListPager;
-	private Object tabComponent;
-	private Object reminderListComponent;
-	private Object comboEmailAccount;
-	private RemindersDialogHandler dialogHandler;
-	
 	private static final String TAB_XML = "/ui/plugins/reminders/remindersTab.xml";
 	
-	private static final String TAB_TABLE = "tableReminders";
-	private static final String TAB_TABLE_PANEL = "panelTableReminders";
+	/**
+	 * FrontlineSMS
+	 */
+	private FrontlineSMS frontlineController;
 	
-	private static final String TAB_MENU = "menuReminders";
+	/**
+	 * ApplicationContext
+	 */
+	private ApplicationContext applicationContext;
+	
+	/**
+	 * ReminderDao
+	 */
+	private final ReminderDao reminderDao;
+	
+	/**
+	 * ContactDao
+	 */
+	private final ContactDao contactDao;
+	
+	/**
+	 * EmailDao
+	 */
+	private final EmailDao emailDao;
+	
+	/**
+	 * EmailAccountDao
+	 */
+	private final EmailAccountDao emailAccountDao;
+	
+	/**
+	 * EmailServerHandler
+	 */
+	private final EmailServerHandler emailManager;
+	
+	/**
+	 * Reminders pager
+	 */
+	private ComponentPagingHandler pagerReminders;
+	
+	private Object tabComponent;
+	private Object tableReminders;
+	private Object comboEmailAccount;
+	private Object panelTableReminders;
+	private Object menuReminders;
+	private Object toolbarReminders;
+	
 	private static final String TAB_MENU_CREATE = "menuCreateReminder";
 	private static final String TAB_MENU_SEND = "menuSendReminder";
 	private static final String TAB_MENU_EDIT = "menuEditReminder";
 	private static final String TAB_MENU_DELETE = "menuDeleteReminder";
 	
-	private static final String TAB_TOOLBAR = "toolbarReminders";
 	private static final String TAB_TOOLBAR_CREATE = "buttonCreateReminder";
 	private static final String TAB_TOOLBAR_SEND = "buttonSendReminder";
 	private static final String TAB_TOOLBAR_EDIT = "buttonEditReminder";
@@ -124,19 +152,25 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		this.emailAccountDao = this.ui.getFrontlineController().getEmailAccountFactory();
 		this.emailManager = this.ui.getFrontlineController().getEmailServerHandler();
 		
-		this.reminderListComponent = this.ui.find(this.tabComponent, TAB_TABLE);
-		this.reminderListPager = new ComponentPagingHandler(this.ui, this, reminderListComponent);
+		this.menuReminders = this.ui.find(this.tabComponent, "menuReminders");
+		this.toolbarReminders = this.ui.find(this.tabComponent, "toolbarReminders");
+		
+		this.tableReminders = this.ui.find(this.tabComponent, "tableReminders");
+		this.pagerReminders = new ComponentPagingHandler(this.ui, this, tableReminders);
 		this.comboEmailAccount = this.ui.find(this.tabComponent, "comboEmailAccount");
 		
-		Object panelReminders = this.ui.find(this.tabComponent, TAB_TABLE_PANEL);
-		this.ui.add(panelReminders, this.reminderListPager.getPanel());
+		this.panelTableReminders = this.ui.find(this.tabComponent, "panelTableReminders");
+		this.ui.add(this.panelTableReminders, this.pagerReminders.getPanel());
 		
-		this.reminderListPager.setCurrentPage(0);
-		this.reminderListPager.refresh();
+		this.pagerReminders.setCurrentPage(0);
+		this.pagerReminders.refresh();
 		
 		loadEmailAccounts();
 	}
 	
+	/**
+	 * Handle Frontline notifications
+	 */
 	public void notify(FrontlineEventNotification notification) {
 		if (notification instanceof TabChangedNotification) {
 			loadEmailAccounts();
@@ -154,9 +188,14 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 	
 	/**
-	 * Hashmap to store Reminder to ScheduledFuture to allow cancelling of scheduled tasks
+	 * Hashmap to store Reminders to allow cancelling of scheduled tasks
 	 */
-	private final HashMap<Reminder,ScheduledFuture<?>> futures = new HashMap<Reminder,ScheduledFuture<?>>();
+	private final HashMap<Reminder, ScheduledFuture<?>> futures = new HashMap<Reminder, ScheduledFuture<?>>();
+	
+	/**
+	 * Hashmap to store expired Reminders to allow cancelling of expiry tasks
+	 */
+	private final HashMap<Reminder, ScheduledFuture<?>> expired = new HashMap<Reminder, ScheduledFuture<?>>(); 
 	
 	/**
 	 * Schedule a Reminder
@@ -165,20 +204,27 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		LOG.debug("Callback.scheduleReminder: " + reminder);
 		if (reminder != null && reminder.getStatus() != Status.SENT) {
 			Calendar start = (Calendar)reminder.getStartCalendar().clone();
+			Calendar end = reminder.getEndCalendar();
 			Calendar now = Calendar.getInstance();
 			if (reminder.getPeriod() > 0) {
 				while (start.before(now)) {
 					start.add(Calendar.MILLISECOND, (int)reminder.getPeriod());
 				}
 				LOG.debug("Reminder Scheduled: " + reminder);
-				long initialDelay = start.getTimeInMillis() - now.getTimeInMillis();
-				ScheduledFuture<?> future = this.scheduler.scheduleAtFixedRate(reminder, initialDelay, reminder.getPeriod(), TimeUnit.MILLISECONDS);
+				long startDelay = start.getTimeInMillis() - now.getTimeInMillis();
+				ScheduledFuture<?> future = this.scheduler.scheduleAtFixedRate(reminder, startDelay, reminder.getPeriod(), TimeUnit.MILLISECONDS);
 				this.futures.put(reminder, future);
+				
+				LOG.debug("Expiry Scheduled: " + reminder.getEndCalendar().getTime());
+				long endDelay = end.getTimeInMillis() - now.getTimeInMillis();
+				ExpiredReminder expiredReminder = new ExpiredReminder(reminder);
+				ScheduledFuture<?> expiry = this.scheduler.schedule(expiredReminder, endDelay, TimeUnit.MILLISECONDS);
+				this.expired.put(reminder, expiry);
 			}
 			else {
 				LOG.debug("Reminder Scheduled: " + reminder);
-				long initialDelay = start.getTimeInMillis() - now.getTimeInMillis();
-				ScheduledFuture<?> future = this.scheduler.schedule(reminder, initialDelay, TimeUnit.MILLISECONDS);
+				long startDelay = start.getTimeInMillis() - now.getTimeInMillis();
+				ScheduledFuture<?> future = this.scheduler.schedule(reminder, startDelay, TimeUnit.MILLISECONDS);
 				this.futures.put(reminder, future);
 			}
 		}
@@ -190,11 +236,16 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	public void stopReminder(Reminder reminder) {
 		LOG.debug("Callback.stopReminder: " + reminder);
 		if (reminder != null && this.futures.containsKey(reminder)) {
-			ScheduledFuture<?> future = futures.get(reminder);
+			ScheduledFuture<?> future = this.futures.get(reminder);
 			if (future != null) {
 				boolean result = future.cancel(true);
-				LOG.debug("Cancel: " + result);	
+				LOG.debug("Future Cancel: " + result);	
 			}	
+			ScheduledFuture<?> expiry = this.expired.get(reminder);
+			if (expiry != null) {
+				boolean result = expiry.cancel(true);
+				LOG.debug("Expiry Cancel: " + result);	
+			}
 		}
 	}
 	
@@ -206,7 +257,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		if (reminder != null) {
 			this.reminderDao.updateReminder(reminder);
 		}
-		this.reminderListPager.refresh();
+		this.pagerReminders.refresh();
 	}
 	
 	/**
@@ -223,13 +274,14 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	 * Send a Reminder
 	 */
 	public void sendReminder(Reminder reminder) {
+		LOG.debug("sendReminder: "+ reminder);
 		LOG.debug("sendReminder: " + reminder);	
 		if (reminder != null) {
 			if (reminder.getType() == Reminder.Type.EMAIL) {
 				EmailAccount emailAccount = this.getEmailAccount();
 				if (emailAccount != null) {
 					for (String contactName : reminder.getRecipientsArray()) {
-						LOG.trace("Sending EMAIL");
+						LOG.debug("Sending EMAIL");
 						Contact contact = this.contactDao.getContactByName(contactName);
 						Email email = new Email(emailAccount, contact.getEmailAddress(), reminder.getSubject(), reminder.getContent());	
 						this.emailDao.saveEmail(email);
@@ -245,7 +297,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 				for (String contactName : reminder.getRecipientsArray()) {
 					Contact contact = this.contactDao.getContactByName(contactName);
 					if (contact != null) {
-						LOG.trace("Sending MESSAGE");
+						LOG.debug("Sending MESSAGE");
 						this.frontlineController.sendTextMessage(contact.getPhoneNumber(), reminder.getContent());
 					}
 				}
@@ -262,7 +314,7 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 			}
 			this.reminderDao.updateReminder(reminder);
 		}
-		this.reminderListPager.refresh();
+		this.pagerReminders.refresh();
 	}
 	
 	/**
@@ -275,17 +327,27 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		}
 	}
 	
+	/**
+	 * Set Front
+	 * @param frontlineController FrontlineSMS
+	 */
 	public void setFrontline(FrontlineSMS frontlineController) {
 		this.frontlineController = frontlineController;
 		this.frontlineController.getEventBus().registerObserver(this);
 	}
 	
+	/**
+	 * Get Thinlet tab
+	 * @return
+	 */
 	public Object getTab(){
 		return super.getTabComponent();
 	}
 	
+	/**
+	 * Load email accounts
+	 */
 	private void loadEmailAccounts() {
-		System.out.println("loadEmailAccounts");
 		int index = 0;
 		String selectedEmailAccount = RemindersPluginProperties.getEmailAccount();
 		this.ui.removeAll(this.comboEmailAccount);
@@ -298,8 +360,18 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 			}
 			index++;
 		}
+		if (this.ui.getSelectedItem(this.comboEmailAccount) == null) {
+			this.ui.setSelectedIndex(this.comboEmailAccount, 0);
+			for (EmailAccount emailAccount : this.emailAccountDao.getSendingEmailAccounts()) {
+				RemindersPluginProperties.setEmailAccount(emailAccount.getAccountName());	
+				break;
+			}
+		}
 	}
 	
+	/**
+	 * Get email account
+	 */
 	private EmailAccount getEmailAccount() {
 		Object selectedItem = this.ui.getSelectedItem(this.comboEmailAccount);
 		if (selectedItem != null) {
@@ -308,6 +380,9 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		return null;
 	}
 	
+	/**
+	 * Email account changed
+	 */
 	public void emailAccountChanged(Object comboEmailAccount) {
 		Object selectedItem = this.ui.getSelectedItem(comboEmailAccount);
 		if (selectedItem != null) {
@@ -324,12 +399,15 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		}
 	}
 	
+	/**
+	 * Remove reminders
+	 */
 	public void removeSelectedFromReminderList() {
-		LOG.trace("removeSelectedFromReminderList");
-		final Object[] selected = this.ui.getSelectedItems(this.reminderListComponent);
+		LOG.debug("removeSelectedFromReminderList");
+		final Object[] selected = this.ui.getSelectedItems(this.tableReminders);
 		for (Object o : selected) {
 			Reminder reminder = this.ui.getAttachedObject(o, Reminder.class);
-			LOG.trace("Deleting Reminder:" + reminder);
+			LOG.debug("Deleting Reminder:" + reminder);
 			if (reminder != null) {
 				this.reminderDao.deleteReminder(reminder);
 				if (reminder.getType() == Reminder.Type.EMAIL) {
@@ -341,78 +419,90 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 			}
 		}
 		this.ui.removeConfirmationDialog();
-		this.reminderListPager.refresh();
-	
-		Object list = this.ui.find(this.tabComponent, TAB_TABLE);
-		Object popup = this.ui.find(this.tabComponent, TAB_MENU);
-		Object toolbar = this.ui.find(this.tabComponent, TAB_TOOLBAR);
-		enableOptions(list, popup, toolbar);
+		this.pagerReminders.refresh();
+		this.enableOptions(this.tableReminders, this.menuReminders, this.toolbarReminders);
 	}
 	
+	/**
+	 * Enable menu options and buttons accordingly
+	 * @param list
+	 * @param popup
+	 * @param toolbar
+	 */
 	public void enableOptions(Object list, Object popup, Object toolbar) {
 		Object[] selectedItems = this.ui.getSelectedItems(list);
 		boolean hasSelection = selectedItems.length > 0;
-		for (Object o : this.ui.getItems(popup)) {
-			String name = this.ui.getString(o, Thinlet.NAME);
-			if (name == null) { 
-				continue;
+		for (Object item : this.ui.getItems(popup)) {
+			String name = this.ui.getString(item, Thinlet.NAME);
+			if (TAB_MENU_CREATE.equals(name)) {
+				this.ui.setEnabled(item, true);
 			}
-			else if (name.equals(TAB_MENU_CREATE)) {
-				this.ui.setEnabled(o, true);
+			else if (TAB_MENU_EDIT.equals(name)) {
+				this.ui.setEnabled(item, hasSelection);
 			}
-			else if (name.equals(TAB_MENU_EDIT)) {
-				this.ui.setEnabled(o, hasSelection);
+			else if (TAB_MENU_DELETE.equals(name)) {
+				this.ui.setEnabled(item, hasSelection);
 			}
-			else if (name.equals(TAB_MENU_DELETE)) {
-				this.ui.setEnabled(o, hasSelection);
-			}
-			else if (name.equals(TAB_MENU_SEND)) {
-				this.ui.setEnabled(o, hasSelection);
+			else if (TAB_MENU_SEND.equals(name)) {
+				this.ui.setEnabled(item, hasSelection);
 			}
 		}
-		for (Object o : this.ui.getItems(toolbar)) {
-			String name = this.ui.getString(o, Thinlet.NAME);
-			if (name == null) { 
-				continue;
+		for (Object item : this.ui.getItems(toolbar)) {
+			String name = this.ui.getString(item, Thinlet.NAME);
+			if (TAB_TOOLBAR_CREATE.equals(name)) {
+				this.ui.setEnabled(item, true);
 			}
-			else if (name.equals(TAB_TOOLBAR_CREATE)) {
-				this.ui.setEnabled(o, true);
+			else if (TAB_TOOLBAR_EDIT.equals(name)) {
+				this.ui.setEnabled(item, hasSelection);
 			}
-			else if (name.equals(TAB_TOOLBAR_EDIT)) {
-				this.ui.setEnabled(o, hasSelection);
+			else if (TAB_TOOLBAR_DELETE.equals(name)) {
+				this.ui.setEnabled(item, hasSelection);
 			}
-			else if (name.equals(TAB_TOOLBAR_DELETE)) {
-				this.ui.setEnabled(o, hasSelection);
-			}
-			else if (name.equals(TAB_TOOLBAR_SEND)) {
-				this.ui.setEnabled(o, hasSelection);
+			else if (TAB_TOOLBAR_SEND.equals(name)) {
+				this.ui.setEnabled(item, hasSelection);
 			}
 		}
 	}
 
+	/**
+	 * Show Reminders create / edit dialog
+	 */
 	public void showReminderDialog() {
 		showReminderDialog(null);
 	}
 	
+	/**
+	 * Show Reminders create / edit dialog
+	 * @param reminderList
+	 */
 	public void showReminderDialog(Object reminderList) {
-		this.dialogHandler = new RemindersDialogHandler(this.ui, this.applicationContext, this);
+		RemindersDialogHandler dialogHandler = new RemindersDialogHandler(this.ui, this.applicationContext, this);
+		dialogHandler.setFrontline(this.frontlineController);
 		if (reminderList != null) {
 			final Object selected = this.ui.getSelectedItem(reminderList);
 			Reminder reminder = this.ui.getAttachedObject(selected, Reminder.class);
-			this.dialogHandler.init(reminder);
+			dialogHandler.init(reminder);
 		}
 		else {
-			this.dialogHandler.init(null);
+			dialogHandler.init(null);
 		}
 	}
 	
+	/**
+	 * Populate reminders table
+	 */
 	public PagedListDetails getListDetails(Object list, int startIndex, int limit) {
-		LOG.trace("getListDetails:" + this.ui.getName(list));
-			List<Reminder> reminders = this.reminderDao.getAllReminders(startIndex, limit);
-			Object[] listItems = toThinletReminders(reminders);
-			return new PagedListDetails(listItems.length, listItems);
+		LOG.debug("getListDetails:" + this.ui.getName(list));
+		List<Reminder> reminders = this.reminderDao.getAllReminders(startIndex, limit);
+		Object[] listItems = toThinletReminders(reminders);
+		return new PagedListDetails(listItems.length, listItems);
 	}
 	
+	/**
+	 * Convert collection of reminders to table rows
+	 * @param reminders collection of reminders
+	 * @return collection of table rows
+	 */
 	private Object[] toThinletReminders(List<Reminder> reminders) {
 		Object[] components = new Object[reminders.size()];
 		for (int i = 0; i < components.length; i++) {
@@ -422,6 +512,11 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		return components;
 	}
 	
+	/**
+	 * Get table row
+	 * @param reminder Reminder
+	 * @return table row
+	 */
 	private Object getReminderRow(Reminder reminder) {
 		Object row = this.ui.createTableRow(reminder);
 		

@@ -29,10 +29,14 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 
+import net.frontlinesms.FrontlineSMS;
 import net.frontlinesms.FrontlineUtils;
 import net.frontlinesms.data.domain.Contact;
+import net.frontlinesms.data.events.DatabaseEntityNotification;
 import net.frontlinesms.data.repository.ContactDao;
 import net.frontlinesms.data.repository.EmailAccountDao;
+import net.frontlinesms.events.EventObserver;
+import net.frontlinesms.events.FrontlineEventNotification;
 import net.frontlinesms.plugins.reminders.data.domain.OnceReminder;
 import net.frontlinesms.plugins.reminders.data.domain.Reminder;
 import net.frontlinesms.plugins.reminders.data.domain.Reminder.Type;
@@ -51,47 +55,66 @@ import net.frontlinesms.ui.i18n.InternationalisationUtils;
  * see {@link "http://www.frontlinesms.net"} for more details. 
  * copyright owned by Kiwanja.net
  */
-public class RemindersDialogHandler implements ThinletUiEventHandler, PagedComponentItemProvider {
+public class RemindersDialogHandler implements ThinletUiEventHandler, PagedComponentItemProvider, EventObserver {
 	
 	private static Logger LOG = FrontlineUtils.getLogger(RemindersDialogHandler.class);
 	
 	private static final String DIALOG_XML = "/ui/plugins/reminders/remindersForm.xml";
 	
-	private static final String DIALOG_TABLE = "tableRecipients";
-	private static final String DIALOG_PANEL = "panelRecipients";
+	/**
+	 * FrontlineSMS
+	 */
+	private FrontlineSMS frontlineController;
 	
-	private static final String DIALOG_IS_EMAIL = "checkboxEmail";
-	private static final String DIALOG_IS_MESSAGE = "checkboxMessage";
-	private static final String DIALOG_SUBJECT = "textSubject";
-	private static final String DIALOG_MESSAGE = "textMessage";
-	
-	private static final String DIALOG_COMBO_OCCURRENCE = "comboOccurrence";
-	
-	private static final String DIALOG_COMBO_HOUR_START = "comboHourStart";
-	private static final String DIALOG_COMBO_MINUTE_START = "comboMinuteStart";
-	private static final String DIALOG_COMBO_AM_PM_START = "comboAmPmStart";
-
-	private static final String DIALOG_DATE_START = "textDateStart";
-	
-	private static final String DIALOG_COMBO_HOUR_END = "comboHourEnd";
-	private static final String DIALOG_COMBO_MINUTE_END = "comboMinuteEnd";
-	private static final String DIALOG_COMBO_AM_PM_END = "comboAmPmEnd";
-	private static final String DIALOG_DATE_END = "textDateEnd";
-	private static final String DIALOG_BUTTON_DATE_END = "buttonDateEnd";
-
-	private Object dialogComponent;
+	/**
+	 * UiGeneratorController
+	 */
 	private UiGeneratorController ui;
+	
+	/**
+	 * ApplicationContext
+	 */
 	private ApplicationContext applicationContext;
 	
 	private final ReminderDao reminderDao;
 	private final ContactDao contactDao;
 	private final EmailAccountDao emailAccountDao;
 	
-	private ComponentPagingHandler contactListPager;
-	private Object contactListComponent;
+	private Object dialogReminders;
+	private ComponentPagingHandler pagerRecipients;
+	private Object tableRecipients;
 	private Reminder selectedReminder;
 	private RemindersCallback remindersCallback;
 	
+	private Object panelRecipients;
+	private Object comboOccurrence;
+	
+	private Object comboHourStart;
+	private Object comboHourEnd;
+	
+	private Object comboMinuteStart;
+	private Object comboMinuteEnd;
+	
+	private Object comboAmPmStart;
+	private Object comboAmPmEnd;
+	
+	private Object textDateStart;
+	private Object textDateEnd;
+	
+	private Object checkboxEmail;
+	private Object checkboxMessage;
+	
+	private Object buttonDateEnd;
+	
+	private Object textMessage;
+	private Object textSubject;
+	
+	/**
+	 * RemindersDialogHandler
+	 * @param ui UiGeneratorController
+	 * @param applicationContext ApplicationContext
+	 * @param callback RemindersCallback
+	 */
 	public RemindersDialogHandler(UiGeneratorController ui, ApplicationContext applicationContext, RemindersCallback callback) {
 		this.ui = ui;
 		this.applicationContext = applicationContext;
@@ -101,119 +124,131 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		this.emailAccountDao = this.ui.getFrontlineController().getEmailAccountFactory();
 	}
 	
+	/**
+	 * Initialize dialog
+	 * @param reminder Reminder
+	 */
 	public void init(Reminder reminder) {
 		this.selectedReminder = reminder;
-		this.dialogComponent = this.ui.loadComponentFromFile(DIALOG_XML, this);
+		this.dialogReminders = this.ui.loadComponentFromFile(DIALOG_XML, this);
+		this.panelRecipients = this.ui.find(this.dialogReminders, "panelRecipients");
 		
-		Object reminderDialog = this.ui.loadComponentFromFile(DIALOG_XML, this);
-		Object panelContacts = this.ui.find(reminderDialog, DIALOG_PANEL);
+		this.tableRecipients = this.ui.find(this.dialogReminders, "tableRecipients");
+		this.pagerRecipients = new ComponentPagingHandler(this.ui, this, this.tableRecipients);
 		
-		this.contactListComponent = this.ui.find(reminderDialog, DIALOG_TABLE);
-		this.contactListPager = new ComponentPagingHandler(this.ui, this, this.contactListComponent);
+		this.ui.add(this.panelRecipients, this.pagerRecipients.getPanel());
+		this.ui.add(this.dialogReminders);
 		
-		this.ui.add(panelContacts, this.contactListPager.getPanel());
-		this.ui.add(reminderDialog);
+		this.pagerRecipients.setCurrentPage(0);
+		this.pagerRecipients.refresh();
 		
-		this.contactListPager.setCurrentPage(0);
-		this.contactListPager.refresh();
-		
-		Object comboOccurrence = this.ui.find(reminderDialog, DIALOG_COMBO_OCCURRENCE);
+		this.comboOccurrence = this.ui.find(this.dialogReminders, "comboOccurrence");
 		for (Reminder reminderClass : RemindersFactory.getReminderClasses()) {
 			Object comboBoxChoice = this.ui.createComboboxChoice(reminderClass.getOccurrenceLabel(), reminderClass.getOccurrence());
-			this.ui.add(comboOccurrence, comboBoxChoice);
+			this.ui.add(this.comboOccurrence, comboBoxChoice);
 		}
 		
-		Object comboHourStart = this.ui.find(reminderDialog, DIALOG_COMBO_HOUR_START);
-		Object comboHourEnd = this.ui.find(reminderDialog, DIALOG_COMBO_HOUR_END);
+		this.comboHourStart = this.ui.find(this.dialogReminders, "comboHourStart");
+		this.comboHourEnd = this.ui.find(this.dialogReminders, "comboHourEnd");
 		for (int hour = 1; hour <= 12 ; hour ++) {
-			this.ui.add(comboHourStart, this.ui.createComboboxChoice(Integer.toString(hour), hour));
-			this.ui.add(comboHourEnd, this.ui.createComboboxChoice(Integer.toString(hour), hour));
+			this.ui.add(this.comboHourStart, this.ui.createComboboxChoice(Integer.toString(hour), hour));
+			this.ui.add(this.comboHourEnd, this.ui.createComboboxChoice(Integer.toString(hour), hour));
 		}
 		
-		Object comboMinuteStart = this.ui.find(reminderDialog, DIALOG_COMBO_MINUTE_START);
-		Object comboMinuteEnd = this.ui.find(reminderDialog, DIALOG_COMBO_MINUTE_END);
+		this.comboMinuteStart = this.ui.find(this.dialogReminders, "comboMinuteStart");
+		this.comboMinuteEnd = this.ui.find(this.dialogReminders, "comboMinuteEnd");
 		for (int minute = 0; minute < 60; minute ++) {
-			this.ui.add(comboMinuteStart, this.ui.createComboboxChoice(String.format("%02d", minute), minute));
-			this.ui.add(comboMinuteEnd, this.ui.createComboboxChoice(String.format("%02d", minute), minute));
+			this.ui.add(this.comboMinuteStart, this.ui.createComboboxChoice(String.format("%02d", minute), minute));
+			this.ui.add(this.comboMinuteEnd, this.ui.createComboboxChoice(String.format("%02d", minute), minute));
 		}
 		
-		Object comboAmPmStart = this.ui.find(reminderDialog, DIALOG_COMBO_AM_PM_START);
-		Object comboAmPmEnd = this.ui.find(reminderDialog, DIALOG_COMBO_AM_PM_END);
+		this.comboAmPmStart = this.ui.find(this.dialogReminders, "comboAmPmStart");
+		this.comboAmPmEnd = this.ui.find(this.dialogReminders, "comboAmPmEnd");
 		for (String amPm : new String [] {"AM", "PM"}) {
-			this.ui.add(comboAmPmStart, this.ui.createComboboxChoice(amPm, amPm));
-			this.ui.add(comboAmPmEnd, this.ui.createComboboxChoice(amPm, amPm));
+			this.ui.add(this.comboAmPmStart, this.ui.createComboboxChoice(amPm, amPm));
+			this.ui.add(this.comboAmPmEnd, this.ui.createComboboxChoice(amPm, amPm));
 		}
 		
-		Object textDateStart = this.ui.find(reminderDialog, DIALOG_DATE_START);
-		Object textDateEnd = this.ui.find(reminderDialog, DIALOG_DATE_END);
+		this.textDateStart = this.ui.find(this.dialogReminders, "textDateStart");
+		this.textDateEnd = this.ui.find(this.dialogReminders, "textDateEnd");
+		this.buttonDateEnd = this.ui.find(this.dialogReminders, "buttonDateEnd");
+		
+		this.checkboxEmail = this.ui.find(this.dialogReminders, "checkboxEmail");
+		this.checkboxMessage = this.ui.find(this.dialogReminders, "checkboxMessage");
+		
+		this.textSubject = this.ui.find(this.dialogReminders, "textSubject");
+		this.textMessage = this.ui.find(this.dialogReminders, "textMessage");
 		
 		if (reminder != null) {
-			this.ui.setAttachedObject(reminderDialog, reminder);
-			for (int index = 0; index < this.ui.getCount(comboOccurrence); index++) {
-				Object comboOccurrenceItem = this.ui.getItem(comboOccurrence, index);
+			this.ui.setAttachedObject(this.dialogReminders, reminder);
+			for (int index = 0; index < this.ui.getCount(this.comboOccurrence); index++) {
+				Object comboOccurrenceItem = this.ui.getItem(this.comboOccurrence, index);
 				String comboOccurrenceItemOccurrence = this.ui.getAttachedObject(comboOccurrenceItem).toString();
 				if (reminder.getOccurrence().equalsIgnoreCase(comboOccurrenceItemOccurrence)) {
-					this.ui.setSelectedIndex(comboOccurrence, index);
+					this.ui.setSelectedIndex(this.comboOccurrence, index);
 					break;
 				}				
 			}
-			occurrenceChanged(reminderDialog, comboOccurrence);
-			
-			setDateFields(reminder.getStartCalendar(), textDateStart, comboHourStart, comboMinuteStart, comboAmPmStart);
-			setDateFields(reminder.getEndCalendar(), textDateEnd, comboHourEnd, comboMinuteEnd, comboAmPmEnd);
-			
-			Object checkboxEmail = this.ui.find(reminderDialog, DIALOG_IS_EMAIL);
-			this.ui.setSelected(checkboxEmail, reminder.getType() == Reminder.Type.EMAIL);
-			
-			Object checkboxMessage = this.ui.find(reminderDialog, DIALOG_IS_MESSAGE);
-			this.ui.setSelected(checkboxMessage, reminder.getType() == Reminder.Type.MESSAGE);
-			
-			Object textSubject = this.ui.find(reminderDialog, DIALOG_SUBJECT);
-			this.ui.setText(textSubject, reminder.getSubject());
-			
-			Object textMessage = this.ui.find(reminderDialog, DIALOG_MESSAGE);
-			this.ui.setText(textMessage, reminder.getContent());
-			this.ui.setText(this.dialogComponent, InternationalisationUtils.getI18NString(RemindersConstants.EDIT_REMINDER));
-			
+			occurrenceChanged(this.dialogReminders, this.comboOccurrence);
+			setDateFields(reminder.getStartCalendar(), this.textDateStart, this.comboHourStart, this.comboMinuteStart, this.comboAmPmStart);
+			setDateFields(reminder.getEndCalendar(), this.textDateEnd, this.comboHourEnd, this.comboMinuteEnd, this.comboAmPmEnd);
+			this.ui.setSelected(this.checkboxEmail, reminder.getType() == Reminder.Type.EMAIL);
+			this.ui.setSelected(this.checkboxMessage, reminder.getType() == Reminder.Type.MESSAGE);
+			this.ui.setText(this.textSubject, reminder.getSubject());
+			this.ui.setText(this.textMessage, reminder.getContent());
+			this.ui.setText(this.dialogReminders, InternationalisationUtils.getI18NString(RemindersConstants.EDIT_REMINDER));
 		}
 		else {
 			Calendar now = Calendar.getInstance();
-			setDateFields(now, textDateStart, comboHourStart, comboMinuteStart, comboAmPmStart);
-			setDateFields(now, textDateEnd, comboHourEnd, comboMinuteEnd, comboAmPmEnd);
-			for (int index = 0; index < this.ui.getCount(comboOccurrence); index++) {
-				Object comboOccurrenceItem = this.ui.getItem(comboOccurrence, index);
+			setDateFields(now, this.textDateStart, this.comboHourStart, this.comboMinuteStart, this.comboAmPmStart);
+			setDateFields(now, this.textDateEnd, this.comboHourEnd, this.comboMinuteEnd, this.comboAmPmEnd);
+			this.ui.setSelected(this.checkboxEmail, true);
+			this.ui.setSelected(this.checkboxMessage, false);
+			this.ui.setText(this.textSubject, "");
+			this.ui.setText(this.textMessage, "");
+			for (int index = 0; index < this.ui.getCount(this.comboOccurrence); index++) {
+				Object comboOccurrenceItem = this.ui.getItem(this.comboOccurrence, index);
 				if (OnceReminder.isSatisfiedBy(this.ui.getAttachedObject(comboOccurrenceItem).toString())) {
-					this.ui.setSelectedIndex(comboOccurrence, index);
+					this.ui.setSelectedIndex(this.comboOccurrence, index);
 					break;
 				}
 			}
-			this.ui.setText(reminderDialog, InternationalisationUtils.getI18NString(RemindersConstants.CREATE_REMINDER));
-			this.ui.setText(this.dialogComponent, InternationalisationUtils.getI18NString(RemindersConstants.CREATE_REMINDER));
+			this.ui.setText(this.dialogReminders, InternationalisationUtils.getI18NString(RemindersConstants.CREATE_REMINDER));
 		}
 	}
 	
+	/**
+	 * Set Front
+	 * @param frontlineController FrontlineSMS
+	 */
+	public void setFrontline(FrontlineSMS frontlineController) {
+		this.frontlineController = frontlineController;
+		this.frontlineController.getEventBus().registerObserver(this);
+	}
+	
+	/**
+	 * Handle Frontline notification
+	 * @param notification
+	 */
+	public void notify(FrontlineEventNotification notification) {
+		if (notification instanceof DatabaseEntityNotification<?>) {
+			Object entity = ((DatabaseEntityNotification<?>) notification).getDatabaseEntity();
+			if (entity instanceof Contact) {
+				this.pagerRecipients.setCurrentPage(0);
+				this.pagerRecipients.refresh();
+			}
+		}
+	}
+	
+	/**
+	 * Save reminder
+	 * @param dialog
+	 * @param table
+	 */
 	public void saveReminder(Object dialog, Object table) {
-		LOG.trace("saveReminder");
-		Object comboOccurrence = this.ui.find(dialog, DIALOG_COMBO_OCCURRENCE);
-		
-		Object comboHourStart = this.ui.find(dialog, DIALOG_COMBO_HOUR_START);
-		Object comboHourEnd = this.ui.find(dialog, DIALOG_COMBO_HOUR_END);
-		
-		Object comboMinuteStart = this.ui.find(dialog, DIALOG_COMBO_MINUTE_START);
-		Object comboMinuteEnd = this.ui.find(dialog, DIALOG_COMBO_MINUTE_END);
-		
-		Object comboAmPmStart = this.ui.find(dialog, DIALOG_COMBO_AM_PM_START);
-		Object comboAmPmEnd = this.ui.find(dialog, DIALOG_COMBO_AM_PM_END);
-		
-		Object textDateStart = this.ui.find(dialog, DIALOG_DATE_START);
-		Object textDateEnd = this.ui.find(dialog, DIALOG_DATE_END);
-		
-		Object checkboxEmail = this.ui.find(dialog, DIALOG_IS_EMAIL);
-		
-		Object textSubject = this.ui.find(dialog, DIALOG_SUBJECT);
-		Object textMessage = this.ui.find(dialog, DIALOG_MESSAGE);
+		LOG.debug("saveReminder");
 		try {
-			Type type = this.ui.isSelected(checkboxEmail) ? Type.EMAIL : Type.MESSAGE;
+			Type type = this.ui.isSelected(this.checkboxEmail) ? Type.EMAIL : Type.MESSAGE;
 			StringBuilder recipients = new StringBuilder();
 			for (Object selected : this.ui.getSelectedItems(table)) {
 				Contact contact = this.ui.getAttachedObject(selected, Contact.class);
@@ -222,17 +257,16 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 				}
 				recipients.append(contact.getName());
 			}
-			Object occurrenceItem = this.ui.getSelectedItem(comboOccurrence);
+			Object occurrenceItem = this.ui.getSelectedItem(this.comboOccurrence);
 			String occurrence = this.ui.getAttachedObject(occurrenceItem).toString();
 			
-			long startDate = getLongFromDateFields(textDateStart, comboHourStart, comboMinuteStart, comboAmPmStart);
-			long endDate = getLongFromDateFields(textDateEnd, comboHourEnd, comboMinuteEnd, comboAmPmEnd);
+			long startDate = getLongFromDateFields(this.textDateStart, this.comboHourStart, this.comboMinuteStart, this.comboAmPmStart);
+			long endDate = getLongFromDateFields(this.textDateEnd, this.comboHourEnd, this.comboMinuteEnd, this.comboAmPmEnd);
 			if (OnceReminder.isSatisfiedBy(occurrence)) {
 				endDate = startDate;
 			}
-			
-			String subject = (type == Reminder.Type.EMAIL) ? this.ui.getText(textSubject) : "";
-			String message = this.ui.getText(textMessage);
+			String subject = (type == Reminder.Type.EMAIL) ? this.ui.getText(this.textSubject) : "";
+			String message = this.ui.getText(this.textMessage);
 			if (type == Type.EMAIL && this.emailAccountDao.getAllEmailAccounts().size() == 0) {
 				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_EMAIL_ACCOUNT));
 			}
@@ -291,7 +325,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 			}
 		} 
 		catch (Exception ex) {
-			LOG.trace(ex);
+			LOG.debug(ex);
 			this.ui.alert(ex.getMessage());
 		}
 		if (remindersCallback != null) {
@@ -299,84 +333,122 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		}
 	}
 	
+	/**
+	 * Remove dialog
+	 * @param dialog
+	 */
 	public void removeDialog(Object dialog) {
 		this.ui.removeDialog(dialog);
 	}
 	
+	/**
+	 * Reminder type changed
+	 * @param checkbox
+	 * @param textSubject
+	 * @param textMessage
+	 */
 	public void typeChanged(Object checkbox, Object textSubject, Object textMessage) {
-		LOG.trace("typeChanged");
-		if (DIALOG_IS_EMAIL.equalsIgnoreCase(ui.getName(checkbox))) {
+		LOG.debug("typeChanged");
+		if (checkbox == this.checkboxEmail) {
 			this.ui.setEnabled(textSubject, true);
+			this.ui.setEditable(textSubject, true);
 		}
-		else if (DIALOG_IS_MESSAGE.equalsIgnoreCase(ui.getName(checkbox))) {
+		else if (checkbox == this.checkboxMessage) {
 			this.ui.setEnabled(textSubject, false);
+			this.ui.setEditable(textSubject, false);
 			this.ui.setText(textSubject, "");
 		}
 	}
 	
+	/**
+	 * Occurrence type changed
+	 * @param dialogReminderForm
+	 * @param occurrence
+	 */
 	public void occurrenceChanged(Object dialogReminderForm, Object occurrence) {
-		LOG.trace("occurrenceChanged");
-		Object comboHourEnd = this.ui.find(dialogReminderForm, DIALOG_COMBO_HOUR_END);
-		Object comboMinuteEnd = this.ui.find(dialogReminderForm, DIALOG_COMBO_MINUTE_END);
-		Object comboAmPmEnd = this.ui.find(dialogReminderForm, DIALOG_COMBO_AM_PM_END);
-		Object textDateEnd = this.ui.find(dialogReminderForm, DIALOG_DATE_END);
-		Object buttonEnd = this.ui.find(dialogReminderForm, DIALOG_BUTTON_DATE_END);
+		LOG.debug("occurrenceChanged");
 		if (this.ui.getSelectedIndex(occurrence) == 0) {
-			this.ui.setEnabled(comboHourEnd, false);
-			this.ui.setEnabled(comboMinuteEnd, false);
-			this.ui.setEnabled(comboAmPmEnd, false);
-			this.ui.setEnabled(buttonEnd, false);
-			this.ui.setSelectedIndex(comboHourEnd, -1);
-			this.ui.setSelectedIndex(comboMinuteEnd, -1);
-			this.ui.setSelectedIndex(comboAmPmEnd, -1);
-			this.ui.setEnabled(textDateEnd, false);
-			this.ui.setEnabled(buttonEnd, false);
+			this.ui.setEnabled(this.comboHourEnd, false);
+			this.ui.setEnabled(this.comboMinuteEnd, false);
+			this.ui.setEnabled(this.comboAmPmEnd, false);
+			this.ui.setEnabled(this.buttonDateEnd, false);
+			this.ui.setEnabled(this.textDateEnd, false);
+			this.ui.setSelectedIndex(this.comboHourEnd, -1);
+			this.ui.setSelectedIndex(this.comboMinuteEnd, -1);
+			this.ui.setSelectedIndex(this.comboAmPmEnd, -1);
 		}
 		else {
-			this.ui.setEnabled(comboHourEnd, true);
-			this.ui.setEnabled(comboMinuteEnd, true);
-			this.ui.setEnabled(comboAmPmEnd, true);
-			this.ui.setEnabled(textDateEnd, true);
-			this.ui.setEnabled(buttonEnd, true);
+			this.ui.setEnabled(this.comboHourEnd, true);
+			this.ui.setEnabled(this.comboMinuteEnd, true);
+			this.ui.setEnabled(this.comboAmPmEnd, true);
+			this.ui.setEnabled(this.textDateEnd, true);
+			this.ui.setEnabled(this.buttonDateEnd, true);
 		}
 	}
 	
+	/**
+	 * Show date selector
+	 * @param textField
+	 */
 	public void showDateSelecter(Object textField) {
-		LOG.trace("showDateSelecter");
+		LOG.debug("showDateSelecter");
 		this.ui.showDateSelecter(textField);
 	}
 	
+	/**
+	 * Populate table
+	 */
 	public PagedListDetails getListDetails(Object list, int startIndex, int limit) {
-		LOG.trace("getListDetails:" + ui.getName(list));
+		LOG.debug("getListDetails:" + this.ui.getName(list));
 		List<Contact> contacts = this.contactDao.getAllContacts(startIndex, limit);
 		Object[] listItems = toThinletContacts(contacts, this.selectedReminder);
 		return new PagedListDetails(listItems.length, listItems);
 	}
 	
+	/**
+	 * Convert contacts to table rows
+	 * @param contacts collection of Contacts
+	 * @param reminder Reminder
+	 * @return collection of table rows
+	 */
 	private Object[] toThinletContacts(List<Contact> contacts, Reminder reminder) {
 		Object[] components = new Object[contacts.size()];
 		for (int i = 0; i < components.length; i++) {
-			Contact c = contacts.get(i);
-			components[i] = getContactRow(c, reminder);
+			Contact contact = contacts.get(i);
+			components[i] = getContactRow(contact, reminder);
 		}
 		return components;
 	}
 	
+	/**
+	 * Get contact table row
+	 * @param contact Contact
+	 * @param reminder Reminder
+	 * @return table row
+	 */
 	private Object getContactRow(Contact contact, Reminder reminder) {
-		Object row = ui.createTableRow(contact);
-		ui.add(row, ui.createTableCell(contact.getDisplayName()));
-		ui.add(row, ui.createTableCell(contact.getPhoneNumber()));
-		ui.add(row, ui.createTableCell(contact.getEmailAddress()));
+		Object row = this.ui.createTableRow(contact);
+		this.ui.add(row, this.ui.createTableCell(contact.getDisplayName()));
+		this.ui.add(row, this.ui.createTableCell(contact.getPhoneNumber()));
+		this.ui.add(row, this.ui.createTableCell(contact.getEmailAddress()));
 		if (reminder != null) {
 			for (String contactName : reminder.getRecipientsArray()) {
 				if (contact.getName().equals(contactName)) {
-					ui.setSelected(row, true);
+					this.ui.setSelected(row, true);
 				}
 			}
 		}
         return row;
 	}
 	
+	/**
+	 * Set date fields
+	 * @param calendar
+	 * @param textDate
+	 * @param comboHour
+	 * @param comboMinute
+	 * @param comboAmPm
+	 */
 	private void setDateFields(Calendar calendar, Object textDate, Object comboHour, Object comboMinute, Object comboAmPm) {
 		this.ui.setText(textDate, getDateStringFromCalendar(calendar));
 		if (calendar.get(Calendar.HOUR_OF_DAY) == 0) {
@@ -398,6 +470,14 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		this.ui.setSelectedIndex(comboAmPm, calendar.get(Calendar.AM_PM));
 	}
 	
+	/**
+	 * Get time ticks from date fields
+	 * @param textDate
+	 * @param comboHour
+	 * @param comboMinute
+	 * @param comboAmPm
+	 * @return time ticks
+	 */
 	private long getLongFromDateFields(Object textDate, Object comboHour, Object comboMinute, Object comboAmPm) {
 		try {
 			String date = this.ui.getText(textDate);
@@ -422,11 +502,17 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 			}
 			calendar.set(Calendar.MINUTE, minute);
 			return calendar.getTimeInMillis();
-		} catch (ParseException e) {
+		} 
+		catch (ParseException e) {
 			return 0;
 		}
 	}
 	
+	/**
+	 * Get date string from Calendar object
+	 * @param calendar Calendar
+	 * @return date string
+	 */
 	private String getDateStringFromCalendar(Calendar calendar) {
 		return String.format("%02d/%02d/%d", calendar.get(Calendar.DAY_OF_MONTH), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.YEAR));
 	}
