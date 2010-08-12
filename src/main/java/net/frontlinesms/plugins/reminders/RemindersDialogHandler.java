@@ -181,6 +181,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		
 		if (reminder != null) {
 			this.ui.setAttachedObject(this.dialogReminders, reminder);
+			this.ui.setEnabled(this.comboOccurrence, false);
 			for (int index = 0; index < this.ui.getCount(this.comboOccurrence); index++) {
 				Object comboOccurrenceItem = this.ui.getItem(this.comboOccurrence, index);
 				String comboOccurrenceItemOccurrence = this.ui.getAttachedObject(comboOccurrenceItem).toString();
@@ -206,6 +207,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 			this.ui.setSelected(this.checkboxMessage, false);
 			this.ui.setText(this.textSubject, "");
 			this.ui.setText(this.textMessage, "");
+			this.ui.setEnabled(this.comboOccurrence, true);
 			for (int index = 0; index < this.ui.getCount(this.comboOccurrence); index++) {
 				Object comboOccurrenceItem = this.ui.getItem(this.comboOccurrence, index);
 				if (OnceReminder.isSatisfiedBy(this.ui.getAttachedObject(comboOccurrenceItem).toString())) {
