@@ -31,7 +31,7 @@
 	    	<button name="buttonEditReminder" action="showReminderDialog(tableReminders)" icon="/icons/big_keyword_edit.png" text="i18n.action.edit" weightx="1" weighty="1" enabled="false"/>
 	        <button name="buttonDeleteReminder" action="showConfirmationDialog('removeSelectedFromReminderList')" icon="/icons/big_keyword_delete.png" text="i18n.action.delete" weightx="1" weighty="1" enabled="false"/>
 	        <button name="buttonSendReminder" action="sendReminder(tableReminders)" icon="/icons/big_sms_send.png" text="i18n.action.resend" weightx="1" weighty="1" enabled="false"/>
-	    	<button name="buttonHelp" tooltip="i18n.tooltip.click.for.help" action="showHelpPage('introduction.htm')" icon="/icons/big_help.png" type="link"/>
+	    	<button name="buttonHelp" tooltip="i18n.tooltip.click.for.help" action="showHelpPage('reminders.htm')" icon="/icons/big_help.png" type="link"/>
 	    </panel>
 	</panel>
 </tab>
