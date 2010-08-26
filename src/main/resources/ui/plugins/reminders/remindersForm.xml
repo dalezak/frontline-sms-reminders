@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<dialog name="dialogReminderForm" icon="/icons/reminders.png" text="i18n.plugins.reminders.reminder" modal="true" resizable="true" closable="true" close="removeDialog(this)" bottom="10" top="10" left="10" right="10" columns="3" gap="13">
+<dialog name="dialogReminderForm" text="i18n.plugins.reminders.reminder" modal="true" resizable="true" closable="true" close="removeDialog(this)" bottom="10" top="10" left="10" right="10" columns="3" gap="13">
     <label name="labelDate" icon="/icons/task.png" text="i18n.plugins.reminders.occurrence" valign="top"/>
     <combobox name="comboOccurrence" action="occurrenceChanged(dialogReminderForm, this)" colspan="2" editable="false" weightx="1" weighty="1" selected="0"/>
     

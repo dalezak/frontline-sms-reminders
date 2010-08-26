@@ -198,6 +198,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 			this.ui.setText(this.textSubject, reminder.getSubject());
 			this.ui.setText(this.textMessage, reminder.getContent());
 			this.ui.setText(this.dialogReminders, InternationalisationUtils.getI18NString(RemindersConstants.EDIT_REMINDER));
+			this.ui.setIcon(this.dialogReminders, "/icons/reminders_edit.png");
 		}
 		else {
 			Calendar now = Calendar.getInstance();
@@ -216,6 +217,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 				}
 			}
 			this.ui.setText(this.dialogReminders, InternationalisationUtils.getI18NString(RemindersConstants.CREATE_REMINDER));
+			this.ui.setIcon(this.dialogReminders, "/icons/reminders_add.png");
 		}
 	}
 	
