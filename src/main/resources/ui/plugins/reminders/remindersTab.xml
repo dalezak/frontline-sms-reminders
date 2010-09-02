@@ -27,9 +27,9 @@
 	    </panel>
 	    <button name="buttonHelp" tooltip="i18n.tooltip.click.for.help" action="showHelpPage('reminders.htm')" icon="/icons/big_help.png" type="link" valign="bottom"/>
 	    <panel name="toolbarReminders" gap="5">
-	    	<button name="buttonCreateReminder" action="showReminderDialog()" icon="/icons/big_reminders_add.png" text="i18n.action.new" weightx="1" weighty="1"/>
-	    	<button name="buttonEditReminder" action="showReminderDialog(tableReminders)" icon="/icons/big_reminders_edit.png" text="i18n.action.edit" weightx="1" weighty="1" enabled="false"/>
-	        <button name="buttonDeleteReminder" action="showConfirmationDialog('removeSelectedFromReminderList')" icon="/icons/big_reminders_delete.png" text="i18n.action.delete" weightx="1" weighty="1" enabled="false"/>
+	    	<button name="buttonCreateReminder" action="showReminderDialog()" icon="/icons/big_reminders_add.png" text="i18n.plugins.reminders.add" weightx="1" weighty="1"/>
+	    	<button name="buttonEditReminder" action="showReminderDialog(tableReminders)" icon="/icons/big_reminders_edit.png" text="i18n.plugins.reminders.edit" weightx="1" weighty="1" enabled="false"/>
+	        <button name="buttonDeleteReminder" action="showConfirmationDialog('removeSelectedFromReminderList')" icon="/icons/big_reminders_delete.png" text="i18n.plugins.reminders.delete" weightx="1" weighty="1" enabled="false"/>
 	    </panel>
 	</panel>
 </tab>

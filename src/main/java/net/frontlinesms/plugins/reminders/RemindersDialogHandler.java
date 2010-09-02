@@ -437,7 +437,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		this.ui.add(row, this.ui.createTableCell(contact.getEmailAddress()));
 		if (reminder != null) {
 			for (String contactName : reminder.getRecipientsArray()) {
-				if (contact.getName().equals(contactName)) {
+				if (contactName.equals(contact.getName())) {
 					this.ui.setSelected(row, true);
 				}
 			}
