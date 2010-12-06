@@ -38,8 +38,10 @@ import net.frontlinesms.ui.i18n.InternationalisationUtils;
  * copyright owned by Kiwanja.net
  */
 @Entity
-@DiscriminatorValue(value = "fridays")
+@DiscriminatorValue(value=FridaysReminder.OCCURRENCE)
 public class FridaysReminder extends Reminder {
+	
+	public static final String OCCURRENCE = "fridays";
 	
 	private static final Logger LOG = FrontlineUtils.getLogger(FridaysReminder.class);
 	
@@ -56,11 +58,11 @@ public class FridaysReminder extends Reminder {
 	
 	@Override
 	public String getOccurrence() {
-		return "fridays";
+		return FridaysReminder.OCCURRENCE;
 	}
 	
 	public static boolean isSatisfiedBy(String occurrence) {
-		return "fridays".equalsIgnoreCase(occurrence);
+		return FridaysReminder.OCCURRENCE.equalsIgnoreCase(occurrence);
 	}
 	
 	public long getPeriod() {

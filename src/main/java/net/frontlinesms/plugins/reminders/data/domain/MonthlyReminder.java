@@ -31,9 +31,11 @@ import net.frontlinesms.plugins.reminders.RemindersConstants;
 import net.frontlinesms.ui.i18n.InternationalisationUtils;
 
 @Entity
-@DiscriminatorValue(value = "monthly")
+@DiscriminatorValue(value=MonthlyReminder.OCCURRENCE)
 public class MonthlyReminder extends Reminder {
 
+	public static final String OCCURRENCE = "monthly";
+	
 	private static final Logger LOG = FrontlineUtils.getLogger(MonthlyReminder.class);
 	
 	public MonthlyReminder() {}
@@ -49,11 +51,11 @@ public class MonthlyReminder extends Reminder {
 	
 	@Override
 	public String getOccurrence() {
-		return "monthly";
+		return MonthlyReminder.OCCURRENCE;
 	}
 
 	public static boolean isSatisfiedBy(String occurrence) {
-		return "monthly".equalsIgnoreCase(occurrence);
+		return MonthlyReminder.OCCURRENCE.equalsIgnoreCase(occurrence);
 	}
 
 	public long getPeriod() {
