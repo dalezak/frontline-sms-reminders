@@ -32,6 +32,7 @@ import org.springframework.context.ApplicationContext;
 import net.frontlinesms.FrontlineSMS;
 import net.frontlinesms.FrontlineUtils;
 import net.frontlinesms.data.domain.Contact;
+import net.frontlinesms.data.domain.EmailAccount;
 import net.frontlinesms.data.events.DatabaseEntityNotification;
 import net.frontlinesms.data.repository.ContactDao;
 import net.frontlinesms.data.repository.EmailAccountDao;
@@ -43,6 +44,7 @@ import net.frontlinesms.plugins.reminders.data.domain.Reminder.Type;
 import net.frontlinesms.plugins.reminders.data.repository.ReminderDao;
 import net.frontlinesms.ui.ThinletUiEventHandler;
 import net.frontlinesms.ui.UiGeneratorController;
+import net.frontlinesms.ui.events.TabChangedNotification;
 import net.frontlinesms.ui.handler.ComponentPagingHandler;
 import net.frontlinesms.ui.handler.PagedComponentItemProvider;
 import net.frontlinesms.ui.handler.PagedListDetails;
@@ -86,6 +88,8 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 	private Reminder selectedReminder;
 	private RemindersCallback remindersCallback;
 	
+	private Object comboEmailAccount;
+	
 	private Object panelRecipients;
 	private Object comboOccurrence;
 	
@@ -122,14 +126,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		this.reminderDao = (ReminderDao) this.applicationContext.getBean("reminderDao");
 		this.contactDao = this.ui.getFrontlineController().getContactDao();
 		this.emailAccountDao = this.ui.getFrontlineController().getEmailAccountFactory();
-	}
-	
-	/**
-	 * Initialize dialog
-	 * @param reminder Reminder
-	 */
-	public void init(Reminder reminder) {
-		this.selectedReminder = reminder;
+		
 		this.dialogReminders = this.ui.loadComponentFromFile(DIALOG_XML, this);
 		this.panelRecipients = this.ui.find(this.dialogReminders, "panelRecipients");
 		
@@ -142,32 +139,17 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		this.pagerRecipients.setCurrentPage(0);
 		this.pagerRecipients.refresh();
 		
+		this.comboEmailAccount = this.ui.find(this.dialogReminders, "comboEmailAccount");
 		this.comboOccurrence = this.ui.find(this.dialogReminders, "comboOccurrence");
-		for (Reminder reminderClass : RemindersFactory.getReminderClasses()) {
-			Object comboBoxChoice = this.ui.createComboboxChoice(reminderClass.getOccurrenceLabel(), reminderClass.getOccurrence());
-			this.ui.add(this.comboOccurrence, comboBoxChoice);
-		}
 		
 		this.comboHourStart = this.ui.find(this.dialogReminders, "comboHourStart");
 		this.comboHourEnd = this.ui.find(this.dialogReminders, "comboHourEnd");
-		for (int hour = 1; hour <= 12 ; hour ++) {
-			this.ui.add(this.comboHourStart, this.ui.createComboboxChoice(Integer.toString(hour), hour));
-			this.ui.add(this.comboHourEnd, this.ui.createComboboxChoice(Integer.toString(hour), hour));
-		}
 		
 		this.comboMinuteStart = this.ui.find(this.dialogReminders, "comboMinuteStart");
 		this.comboMinuteEnd = this.ui.find(this.dialogReminders, "comboMinuteEnd");
-		for (int minute = 0; minute < 60; minute ++) {
-			this.ui.add(this.comboMinuteStart, this.ui.createComboboxChoice(String.format("%02d", minute), minute));
-			this.ui.add(this.comboMinuteEnd, this.ui.createComboboxChoice(String.format("%02d", minute), minute));
-		}
 		
 		this.comboAmPmStart = this.ui.find(this.dialogReminders, "comboAmPmStart");
 		this.comboAmPmEnd = this.ui.find(this.dialogReminders, "comboAmPmEnd");
-		for (String amPm : new String [] {"AM", "PM"}) {
-			this.ui.add(this.comboAmPmStart, this.ui.createComboboxChoice(amPm, amPm));
-			this.ui.add(this.comboAmPmEnd, this.ui.createComboboxChoice(amPm, amPm));
-		}
 		
 		this.textDateStart = this.ui.find(this.dialogReminders, "textDateStart");
 		this.textDateEnd = this.ui.find(this.dialogReminders, "textDateEnd");
@@ -178,7 +160,38 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		
 		this.textSubject = this.ui.find(this.dialogReminders, "textSubject");
 		this.textMessage = this.ui.find(this.dialogReminders, "textMessage");
-		
+	}
+	
+	/**
+	 * Initialize dialog
+	 * @param reminder Reminder
+	 */
+	public void init(Reminder reminder) {
+		this.selectedReminder = reminder;
+		loadEmailAccounts();
+		this.ui.removeAll(this.comboOccurrence);
+		for (Reminder reminderClass : RemindersFactory.getReminderClasses()) {
+			Object comboBoxChoice = this.ui.createComboboxChoice(reminderClass.getOccurrenceLabel(), reminderClass.getOccurrence());
+			this.ui.add(this.comboOccurrence, comboBoxChoice);
+		}
+		this.ui.removeAll(this.comboHourStart);
+		this.ui.removeAll(this.comboHourEnd);
+		for (int hour = 1; hour <= 12 ; hour ++) {
+			this.ui.add(this.comboHourStart, this.ui.createComboboxChoice(Integer.toString(hour), hour));
+			this.ui.add(this.comboHourEnd, this.ui.createComboboxChoice(Integer.toString(hour), hour));
+		}
+		this.ui.removeAll(this.comboMinuteStart);
+		this.ui.removeAll(this.comboMinuteEnd);
+		for (int minute = 0; minute < 60; minute ++) {
+			this.ui.add(this.comboMinuteStart, this.ui.createComboboxChoice(String.format("%02d", minute), minute));
+			this.ui.add(this.comboMinuteEnd, this.ui.createComboboxChoice(String.format("%02d", minute), minute));
+		}
+		this.ui.removeAll(this.comboAmPmStart);
+		this.ui.removeAll(this.comboAmPmEnd);
+		for (String amPm : new String [] {"AM", "PM"}) {
+			this.ui.add(this.comboAmPmStart, this.ui.createComboboxChoice(amPm, amPm));
+			this.ui.add(this.comboAmPmEnd, this.ui.createComboboxChoice(amPm, amPm));
+		}
 		if (reminder != null) {
 			this.ui.setAttachedObject(this.dialogReminders, reminder);
 			this.ui.setEnabled(this.comboOccurrence, false);
@@ -242,6 +255,15 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 				this.pagerRecipients.refresh();
 			}
 		}
+		else if (notification instanceof TabChangedNotification) {
+			loadEmailAccounts();
+		} 
+		else if (notification instanceof DatabaseEntityNotification<?>) {
+			Object entity = ((DatabaseEntityNotification<?>) notification).getDatabaseEntity();
+			if (entity instanceof EmailAccount && !((EmailAccount) entity).isForReceiving()) {
+				loadEmailAccounts();
+			}
+		}
 	}
 	
 	/**
@@ -271,6 +293,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 			}
 			String subject = (type == Reminder.Type.EMAIL) ? this.ui.getText(this.textSubject) : "";
 			String message = this.ui.getText(this.textMessage);
+			EmailAccount emailAccount = getEmailAccount();
 			if (type == Type.EMAIL && this.emailAccountDao.getAllEmailAccounts().size() == 0) {
 				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_EMAIL_ACCOUNT));
 			}
@@ -292,6 +315,9 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 			else if (message.isEmpty()) {
 				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_MESSAGE));
 			}
+			else if (type == Type.EMAIL && emailAccount == null) {
+				this.ui.alert(InternationalisationUtils.getI18NString(RemindersConstants.MISSING_EMAIL_ACCOUNT));
+			}
 			else {
 				Reminder reminder = this.ui.getAttachedObject(dialog, Reminder.class);
 				if (reminder != null) {
@@ -305,6 +331,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 					reminder.setSubject(subject);
 					reminder.setContent(message);
 					reminder.setStatus(Reminder.Status.PENDING);
+					reminder.setEmailAccount(type == Type.EMAIL ? emailAccount : null);
 					this.reminderDao.updateReminder(reminder);
 					if (type == Reminder.Type.EMAIL) {
 						this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_UPDATED));
@@ -316,6 +343,7 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 				else {
 					reminder = RemindersFactory.createReminder(startDate, endDate, type, recipients.toString(), subject, message, occurrence);
 					reminder.setStatus(Reminder.Status.PENDING);
+					reminder.setEmailAccount(type == Type.EMAIL ? emailAccount : null);
 					this.reminderDao.saveReminder(reminder);
 					if (type == Reminder.Type.EMAIL) {
 						this.ui.setStatus(InternationalisationUtils.getI18NString(RemindersConstants.EMAIL_REMINDER_CREATED));
@@ -351,16 +379,18 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 	 * @param textSubject
 	 * @param textMessage
 	 */
-	public void typeChanged(Object checkbox, Object textSubject, Object textMessage) {
+	public void typeChanged(Object checkbox, Object textSubject, Object textMessage, Object comboboxAccount) {
 		LOG.debug("typeChanged");
 		if (checkbox == this.checkboxEmail) {
 			this.ui.setEnabled(textSubject, true);
 			this.ui.setEditable(textSubject, true);
+			this.ui.setEnabled(comboboxAccount, true);
 		}
 		else if (checkbox == this.checkboxMessage) {
 			this.ui.setEnabled(textSubject, false);
 			this.ui.setEditable(textSubject, false);
 			this.ui.setText(textSubject, "");
+			this.ui.setEnabled(comboboxAccount, false);
 		}
 	}
 	
@@ -407,6 +437,35 @@ public class RemindersDialogHandler implements ThinletUiEventHandler, PagedCompo
 		List<Contact> contacts = this.contactDao.getAllContacts(startIndex, limit);
 		Object[] listItems = toThinletContacts(contacts, this.selectedReminder);
 		return new PagedListDetails(listItems.length, listItems);
+	}
+	
+	/**
+	 * Load email accounts
+	 */
+	private void loadEmailAccounts() {
+		int index = 0;
+		EmailAccount selectedEmailAccount = selectedReminder != null ? selectedReminder.getEmailAccount() : null;
+		this.ui.removeAll(this.comboEmailAccount);
+		for (EmailAccount emailAccount : this.emailAccountDao.getSendingEmailAccounts()) {
+			String comboBoxText = String.format("%s : %s : %s : %s", emailAccount.getAccountName(), emailAccount.getAccountServer(), emailAccount.getProtocol(), emailAccount.getAccountServerPort());
+			Object comboBoxItem = this.ui.createComboboxChoice(comboBoxText, emailAccount);
+			this.ui.add(this.comboEmailAccount, comboBoxItem);
+			if (selectedEmailAccount != null && emailAccount.equals(selectedEmailAccount)) {
+				this.ui.setSelectedIndex(this.comboEmailAccount, index);
+			}
+			index++;
+		}
+	}
+	
+	/**
+	 * Get email account
+	 */
+	private EmailAccount getEmailAccount() {
+		Object selectedItem = this.ui.getSelectedItem(this.comboEmailAccount);
+		if (selectedItem != null) {
+			return (EmailAccount)this.ui.getAttachedObject(selectedItem);
+		}
+		return null;
 	}
 	
 	/**

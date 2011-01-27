@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorValue;
@@ -35,12 +36,15 @@ import javax.persistence.Id;
 import javax.persistence.InheritanceType;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cascade;
 
 import net.frontlinesms.FrontlineUtils;
 import net.frontlinesms.data.EntityField;
+import net.frontlinesms.data.domain.EmailAccount;
 import net.frontlinesms.plugins.reminders.RemindersCallback;
 
 /*
@@ -143,6 +147,11 @@ public abstract class Reminder implements Runnable {
 	/** Recipient of the reminder */
 	@Column(name=COLUMN_RECIPIENTS)
 	private String recipients;
+	
+	/** Recipient of the reminder */
+	@ManyToOne(cascade=CascadeType.ALL)
+	@Cascade(value = { org.hibernate.annotations.CascadeType.DELETE_ORPHAN })
+	private EmailAccount emailAccount;
 
 //> CONSTRUCTORS
 	/** Empty constructor required for hibernate. */
@@ -378,7 +387,15 @@ public abstract class Reminder implements Runnable {
 		return calendar;
 	}
 	
-//> GENERATED CODE
+	public void setEmailAccount(EmailAccount emailAccount) {
+		this.emailAccount = emailAccount;
+	}
+
+	public EmailAccount getEmailAccount() {
+		return emailAccount;
+	}
+
+	//> GENERATED CODE
 	/** @see java.lang.Object#hashCode() */
 	@Override
 	public int hashCode() {

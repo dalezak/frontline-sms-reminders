@@ -10,6 +10,9 @@
 	<bean id="reminderDao" class="net.frontlinesms.plugins.reminders.data.repository.hibernate.HibernateReminderDao" parent="baseHibernateDao">
 		<property name="sessionFactory" ref="sessionFactory" />
 	</bean>
+	<bean id="emailAccountDao" class="net.frontlinesms.data.repository.hibernate.HibernateEmailAccountDao" parent="baseHibernateDao">
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
 	<bean id="baseHibernateDao" abstract="true" class="net.frontlinesms.data.repository.hibernate">
 		<property name="sessionFactory" ref="sessionFactory"/>
 		<property name="eventBus" ref="eventBus"/>

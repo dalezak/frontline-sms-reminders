@@ -33,9 +33,12 @@
     </panel>
     
     <label name="labelType" icon="/icons/reminder_type.png" text="i18n.common.type" valign="top"/>
-    <checkbox name="checkboxEmail" action="typeChanged(this, textSubject, textMessage)" group="groupType" halign="center" selected="true" text="i18n.common.email" icon="/icons/email.png"/>
-    <checkbox name="checkboxMessage" action="typeChanged(this, textSubject, textMessage)" group="groupType" text="i18n.common.message" icon="/icons/sms.png"/>
+    <checkbox name="checkboxEmail" action="typeChanged(this, textSubject, textMessage, comboEmailAccount)" group="groupType" halign="center" selected="true" text="i18n.common.email" icon="/icons/email.png"/>
+    <checkbox name="checkboxMessage" action="typeChanged(this, textSubject, textMessage, comboEmailAccount)" group="groupType" text="i18n.common.message" icon="/icons/sms.png"/>
     
+    <label text="i18n.plugins.reminders.account" icon="/icons/email.png" />
+	<combobox name="comboEmailAccount" editable="false" colspan="2" weightx="1"/>
+	    		
     <label name="labelSubject" icon="/icons/email_subject.png" text="i18n.common.subject" valign="top"/>
     <textarea name="textSubject" colspan="2" rows="1" columns="75"/>
     

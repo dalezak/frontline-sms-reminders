@@ -28,41 +28,17 @@ import net.frontlinesms.resources.UserHomeFilePropertySet;
  */
 public class RemindersPluginProperties extends UserHomeFilePropertySet {
 
-	private static final String EMAIL_ACCOUNT = "email.account";
-	
 	private static RemindersPluginProperties instance;
 	
 	public RemindersPluginProperties() {
 		super("reminders");
 	}
 	
-	private static synchronized RemindersPluginProperties getInstance() {
+	protected static synchronized RemindersPluginProperties getInstance() {
 		if (instance == null) {
 			instance = new RemindersPluginProperties();
 		}
 		return instance;
-	}
-	
-	/**
-	 * Get EmailAccount
-	 * @return EmailAccount
-	 */
-	public static String getEmailAccount() {
-		return getInstance().getProperty(EMAIL_ACCOUNT);
-	}
-	
-	/**
-	 * Set EmailAccount
-	 * @param emailAccount EmailAccount
-	 */
-	public static void setEmailAccount(String emailAccount) {
-		if (emailAccount != null) {
-			getInstance().setProperty(EMAIL_ACCOUNT, emailAccount);
-		}
-		else {
-			getInstance().setProperty(EMAIL_ACCOUNT, null);
-		}
-		getInstance().saveToDisk();
 	}
 	
 }

@@ -16,6 +16,7 @@
 		<mapping class="net.frontlinesms.plugins.reminders.data.domain.ThursdaysReminder" /> 
 		<mapping class="net.frontlinesms.plugins.reminders.data.domain.FridaysReminder" /> 
 		<mapping class="net.frontlinesms.plugins.reminders.data.domain.SaturdaysReminder" /> 
-		<mapping class="net.frontlinesms.plugins.reminders.data.domain.SundaysReminder" />     
+		<mapping class="net.frontlinesms.plugins.reminders.data.domain.SundaysReminder" />   
+		<mapping class="net.frontlinesms.data.domain.EmailAccount" />  
 	</session-factory>
 </hibernate-configuration>

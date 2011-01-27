@@ -33,13 +33,11 @@ import net.frontlinesms.EmailServerHandler;
 import net.frontlinesms.FrontlineSMS;
 import net.frontlinesms.FrontlineUtils;
 import net.frontlinesms.data.repository.ContactDao;
-import net.frontlinesms.data.repository.EmailAccountDao;
 import net.frontlinesms.data.repository.EmailDao;
 import net.frontlinesms.plugins.BasePluginThinletTabController;
 import net.frontlinesms.ui.Icon;
 import net.frontlinesms.ui.ThinletUiEventHandler;
 import net.frontlinesms.ui.UiGeneratorController;
-import net.frontlinesms.ui.events.TabChangedNotification;
 import net.frontlinesms.ui.handler.ComponentPagingHandler;
 import net.frontlinesms.ui.handler.PagedComponentItemProvider;
 import net.frontlinesms.ui.handler.PagedListDetails;
@@ -59,7 +57,7 @@ import net.frontlinesms.plugins.reminders.data.repository.ReminderDao;
 import net.frontlinesms.data.domain.Contact;
 import net.frontlinesms.data.domain.Email;
 import net.frontlinesms.data.domain.EmailAccount;
-import net.frontlinesms.data.events.DatabaseEntityNotification;
+import net.frontlinesms.data.events.EntityDeleteWarning;
 import net.frontlinesms.events.EventObserver;
 import net.frontlinesms.events.FrontlineEventNotification;
 
@@ -70,7 +68,7 @@ import net.frontlinesms.events.FrontlineEventNotification;
  * see {@link "http://www.frontlinesms.net"} for more details. 
  * copyright owned by Kiwanja.net
  */
-public class RemindersThinletTabController extends BasePluginThinletTabController<RemindersPluginController> implements ThinletUiEventHandler, PagedComponentItemProvider, EventObserver, RemindersCallback {
+public class RemindersThinletTabController extends BasePluginThinletTabController<RemindersPluginController> implements ThinletUiEventHandler, EventObserver, PagedComponentItemProvider, RemindersCallback {
 
 	private static Logger LOG = FrontlineUtils.getLogger(RemindersThinletTabController.class);
 	
@@ -102,11 +100,6 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	private final EmailDao emailDao;
 	
 	/**
-	 * EmailAccountDao
-	 */
-	private final EmailAccountDao emailAccountDao;
-	
-	/**
 	 * EmailServerHandler
 	 */
 	private final EmailServerHandler emailManager;
@@ -118,7 +111,6 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	
 	private Object tabComponent;
 	private Object tableReminders;
-	private Object comboEmailAccount;
 	private Object panelTableReminders;
 	private Object menuReminders;
 	private Object toolbarReminders;
@@ -149,7 +141,6 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		this.reminderDao = (ReminderDao) applicationContext.getBean("reminderDao");
 		this.contactDao = this.ui.getFrontlineController().getContactDao();
 		this.emailDao = this.ui.getFrontlineController().getEmailDao();
-		this.emailAccountDao = this.ui.getFrontlineController().getEmailAccountFactory();
 		this.emailManager = this.ui.getFrontlineController().getEmailServerHandler();
 		
 		this.menuReminders = this.ui.find(this.tabComponent, "menuReminders");
@@ -157,29 +148,12 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		
 		this.tableReminders = this.ui.find(this.tabComponent, "tableReminders");
 		this.pagerReminders = new ComponentPagingHandler(this.ui, this, tableReminders);
-		this.comboEmailAccount = this.ui.find(this.tabComponent, "comboEmailAccount");
 		
 		this.panelTableReminders = this.ui.find(this.tabComponent, "panelTableReminders");
 		this.ui.add(this.panelTableReminders, this.pagerReminders.getPanel());
 		
 		this.pagerReminders.setCurrentPage(0);
 		this.pagerReminders.refresh();
-		
-		loadEmailAccounts();
-	}
-	
-	/**
-	 * Handle Frontline notifications
-	 */
-	public void notify(FrontlineEventNotification notification) {
-		if (notification instanceof TabChangedNotification) {
-			loadEmailAccounts();
-		} else if (notification instanceof DatabaseEntityNotification<?>) {
-			Object entity = ((DatabaseEntityNotification<?>) notification).getDatabaseEntity();
-			if (entity instanceof EmailAccount && !((EmailAccount) entity).isForReceiving()) {
-				loadEmailAccounts();
-			}
-		}
 	}
 	
 	/**
@@ -196,6 +170,28 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	 * Hashmap to store expired Reminders to allow cancelling of expiry tasks
 	 */
 	private final HashMap<Reminder, ScheduledFuture<?>> expired = new HashMap<Reminder, ScheduledFuture<?>>(); 
+	
+	public void notify(FrontlineEventNotification notification) {
+		if (notification instanceof EntityDeleteWarning<?>) {
+			Object entity = ((EntityDeleteWarning<?>) notification).getDatabaseEntity();
+			if (entity instanceof EmailAccount) {
+				EmailAccount deletedEmailAccount = (EmailAccount)entity;
+				for(Reminder reminder : reminderDao.getAllReminders()) {
+					EmailAccount reminderEmailAccount = reminder.getEmailAccount();
+					if (reminderEmailAccount != null && reminderEmailAccount.equals(deletedEmailAccount)) {
+						LOG.debug("WARNING, email account " + deletedEmailAccount.getAccountName() + " will be deleted!!");
+						try{
+							reminder.setEmailAccount(null);
+							reminderDao.updateReminder(reminder);	
+						}
+						catch (Exception ex) {
+							LOG.error("Error removing email account from Reminder", ex);
+						}
+					}
+				}
+			}
+		}
+	}
 	
 	/**
 	 * Schedule a Reminder
@@ -278,12 +274,11 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 		LOG.debug("sendReminder: " + reminder);	
 		if (reminder != null) {
 			if (reminder.getType() == Reminder.Type.EMAIL) {
-				EmailAccount emailAccount = this.getEmailAccount();
-				if (emailAccount != null) {
+				if (reminder.getEmailAccount() != null) {
 					for (String contactName : reminder.getRecipientsArray()) {
 						LOG.debug("Sending EMAIL");
 						Contact contact = this.contactDao.getContactByName(contactName);
-						Email email = new Email(emailAccount, contact.getEmailAddress(), reminder.getSubject(), reminder.getContent());	
+						Email email = new Email(reminder.getEmailAccount(), contact.getEmailAddress(), reminder.getSubject(), reminder.getContent());	
 						this.emailDao.saveEmail(email);
 						this.emailManager.sendEmail(email);
 					}
@@ -342,61 +337,6 @@ public class RemindersThinletTabController extends BasePluginThinletTabControlle
 	 */
 	public Object getTab(){
 		return super.getTabComponent();
-	}
-	
-	/**
-	 * Load email accounts
-	 */
-	private void loadEmailAccounts() {
-		int index = 0;
-		String selectedEmailAccount = RemindersPluginProperties.getEmailAccount();
-		this.ui.removeAll(this.comboEmailAccount);
-		for (EmailAccount emailAccount : this.emailAccountDao.getSendingEmailAccounts()) {
-			String comboBoxText = String.format("%s : %s : %s : %s", emailAccount.getAccountName(), emailAccount.getAccountServer(), emailAccount.getProtocol(), emailAccount.getAccountServerPort());
-			Object comboBoxItem = this.ui.createComboboxChoice(comboBoxText, emailAccount);
-			this.ui.add(this.comboEmailAccount, comboBoxItem);
-			if (emailAccount.getAccountName().equalsIgnoreCase(selectedEmailAccount)) {
-				this.ui.setSelectedIndex(this.comboEmailAccount, index);
-			}
-			index++;
-		}
-		if (this.ui.getSelectedItem(this.comboEmailAccount) == null) {
-			this.ui.setSelectedIndex(this.comboEmailAccount, 0);
-			for (EmailAccount emailAccount : this.emailAccountDao.getSendingEmailAccounts()) {
-				RemindersPluginProperties.setEmailAccount(emailAccount.getAccountName());	
-				break;
-			}
-		}
-	}
-	
-	/**
-	 * Get email account
-	 */
-	private EmailAccount getEmailAccount() {
-		Object selectedItem = this.ui.getSelectedItem(this.comboEmailAccount);
-		if (selectedItem != null) {
-			return (EmailAccount)this.ui.getAttachedObject(selectedItem);
-		}
-		return null;
-	}
-	
-	/**
-	 * Email account changed
-	 */
-	public void emailAccountChanged(Object comboEmailAccount) {
-		Object selectedItem = this.ui.getSelectedItem(comboEmailAccount);
-		if (selectedItem != null) {
-			EmailAccount emailAccount = (EmailAccount)this.ui.getAttachedObject(selectedItem);
-			if (emailAccount != null) {
-				RemindersPluginProperties.setEmailAccount(emailAccount.getAccountName());
-			}
-			else {
-				RemindersPluginProperties.setEmailAccount(null);
-			}
-		}
-		else {
-			RemindersPluginProperties.setEmailAccount(null);
-		}
 	}
 	
 	/**
